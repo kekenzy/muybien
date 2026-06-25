@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  myapp-api:
+    container_name: muybien-api
+    build: ./myapp-api
+    command: sh -c "sleep 3 && sh runserver.sh"
+    volumes:
+      - ./myapp-api/django:/root/myapp-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings.environments.local
+      - RDS_DB_NAME=muybiendb
+      - RDS_USERNAME=postgres
+      - RDS_PASSWORD=password
+      - RDS_HOSTNAME=myapp-db
+      - RDS_PORT=5432
+    depends_on:
+      - myapp-db
+    networks: [muybien-network]
+
+  myapp-web:
+    container_name: muybien-web
+    build: ./myapp-web
+    command: sh -c "npm run dev"
+    volumes:
+      - ./myapp-web/app:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    networks: [muybien-network]
+
+  myapp-db:
+    image: postgres:16.2
+    container_name: muybien-db
+    environment:
+      - POSTGRES_DB=muybiendb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "15433:5432"
+    volumes:
+      - database:/var/lib/postgresql/data
+      - ./myapp-db/conf/postgresql.conf:/etc/postgresql.conf
+    restart: always
+    networks: [muybien-network]
+
+volumes:
+  database:
+  node_modules:
+
+networks:
+  muybien-network:
+    driver: bridge

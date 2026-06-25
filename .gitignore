@@ -1,0 +1,12 @@
+.env.prod
+.env
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+dist/
+myapp-api/django/log/
+myapp-api/django/staticfiles/
+myapp-api/django/media/
+*.sqlite3
+.DS_Store
