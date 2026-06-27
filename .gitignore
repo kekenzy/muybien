@@ -5,6 +5,8 @@ __pycache__/
 *.pyo
 node_modules/
 dist/
+nginx/ssl/*.crt
+nginx/ssl/*.key
 myapp-api/django/log/
 myapp-api/django/staticfiles/
 myapp-api/django/media/

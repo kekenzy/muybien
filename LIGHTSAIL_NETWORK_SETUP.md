@@ -16,7 +16,7 @@ MuyBien 本番（Docker Compose）で使用するポートです。
 | 8090 | TCP | HTTP（Nginx コンテナ → 80） |
 | 8453 | TCP | HTTPS（Nginx コンテナ → 443） |
 
-> 8090/8453 は **pfweb 等の共有サーバー** で他サービスと 80/443 を分ける場合の設定です。  
+> 8090/8453 は **muy 等の共有サーバー** で他サービスと 80/443 を分ける場合の設定です。  
 > MuyBien 専用インスタンスでは `docker-compose.prod.yml` を **80:80 / 443:443** に変更することを推奨します。
 
 ### 標準ポート構成（専用サーバー推奨）
@@ -130,9 +130,9 @@ myapp-api     ──► myapp-db:5432
 ## 📊 現在の設定確認コマンド
 
 ```bash
-ssh pfweb 'cd /home/ubuntu/muybien && docker compose -f docker-compose.prod.yml ps'
-ssh pfweb 'sudo ufw status'
-ssh pfweb 'docker port muybien-nginx'
+ssh muy 'cd /home/ec2-user/muybien && docker compose -f docker-compose.prod.yml ps'
+ssh muy 'sudo ufw status'
+ssh muy 'docker port muybien-nginx'
 ```
 
 ---

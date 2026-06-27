@@ -1,13 +1,13 @@
 #!/bin/bash
 # MuyBien Lightsail デプロイ共通設定
-# 環境変数で上書き可能（例: SSH_HOST=pfweb PROD_DOMAIN=example.com ./scripts/deploy.sh）
+# 環境変数で上書き可能（例: SSH_HOST=muy PROD_DOMAIN=example.com ./scripts/deploy.sh）
 
 # SSH 接続先（~/.ssh/config の Host エイリアス）
-SSH_HOST="${SSH_HOST:-pfweb}"
-SSH_USER="${SSH_USER:-ubuntu}"
+SSH_HOST="${SSH_HOST:-muy}"
+SSH_USER="${SSH_USER:-ec2-user}"
 
 # サーバー上のプロジェクトディレクトリ
-PROD_DIR="${PROD_DIR:-/home/ubuntu/muybien}"
+PROD_DIR="${PROD_DIR:-/home/ec2-user/muybien}"
 
 # 本番ドメイン（Let's Encrypt / nginx 設定用。未設定なら手動設定）
 PROD_DOMAIN="${PROD_DOMAIN:-}"
@@ -26,6 +26,7 @@ RSYNC_EXCLUDES=(
   --exclude='__pycache__'
   --exclude='*.pyc'
   --exclude='.env'
+  --exclude='.env.prod'
   --exclude='myapp-api/django/log'
   --exclude='.DS_Store'
 )

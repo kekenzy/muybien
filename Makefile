@@ -7,9 +7,17 @@ WEB_CONTAINER=muybien-web
 up:
 	docker-compose up --build -d
 	@echo "起動完了 → http://localhost:5173"
+	@echo "DB が必要な場合: make db-up  または  make up-all"
+
+up-all:
+	docker-compose --profile db up --build -d
+	@echo "起動完了（DB 含む）→ http://localhost:5173"
+
+db-up:
+	docker-compose --profile db up -d myapp-db
 
 down:
-	docker-compose down
+	docker-compose --profile db down
 
 restart: down up
 
@@ -41,7 +49,7 @@ build-front:
 	cd myapp-web/app && npm run build
 
 # ─────────────────────────────────────────
-# 本番デプロイ（pfweb = Lightsail）
+# 本番デプロイ（muy = EC2）
 # ─────────────────────────────────────────
 prod-deploy:
 	@bash scripts/deploy.sh

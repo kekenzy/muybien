@@ -24,7 +24,7 @@
   rsync → Lightsail
        │
        ▼
-[Lightsail インスタンス /home/ubuntu/muybien]
+[EC2 インスタンス /home/ec2-user/muybien]
   docker compose -f docker-compose.prod.yml up --build -d
        │
        ├── nginx    … SPA 配信 + API プロキシ + SSL
@@ -74,16 +74,16 @@ chmod 400 LightsailDefaultKey-ap-northeast-1.pem
 `~/.ssh/config` にエイリアスを追加します（yomohiro_web の `Host yomohiro` と同様）。
 
 ```
-Host pfweb
-  HostName YOUR_LIGHTSAIL_IP
-  User ubuntu
-  IdentityFile ~/.ssh/LightsailDefaultKey-ap-northeast-1.pem
+Host muy
+  HostName YOUR_SERVER_IP
+  User ec2-user
+  IdentityFile ~/.ssh/muybien.pem
 ```
 
 接続テスト：
 
 ```bash
-ssh pfweb "echo OK"
+ssh muy "echo OK"
 ```
 
 ---
@@ -96,18 +96,18 @@ ssh pfweb "echo OK"
 
 ```bash
 # SSH 接続確認のみ（ビルド・転送はまだしない場合）
-ssh pfweb "mkdir -p /home/ubuntu/muybien"
+ssh muy "mkdir -p /home/ec2-user/muybien"
 
 # 初回は deploy.sh がフロントビルドも行うので、先に setup だけしたい場合:
 rsync -avz --exclude='node_modules' --exclude='.git' --exclude='__pycache__' \
-  ./ pfweb:/home/ubuntu/muybien/
+  ./ muy:/home/ec2-user/muybien/
 ```
 
 ### 3.2 サーバー上で初期セットアップ
 
 ```bash
-ssh pfweb
-cd /home/ubuntu/muybien
+ssh muy
+cd /home/ec2-user/muybien
 bash scripts/setup_lightsail.sh
 ```
 
@@ -124,8 +124,8 @@ bash scripts/setup_lightsail.sh
 ### 3.3 環境変数の設定
 
 ```bash
-ssh pfweb
-nano /home/ubuntu/muybien/.env.prod
+ssh muy
+nano /home/ec2-user/muybien/.env.prod
 ```
 
 最低限、以下を実際の値に変更：
@@ -146,8 +146,8 @@ CONTACT_NOTIFY_EMAIL=kenji.nagai@globalway.co.jp
 `nginx/conf.d/production.conf` の `DOMAIN_PLACEHOLDER` を実ドメインに置換：
 
 ```bash
-ssh pfweb
-cd /home/ubuntu/muybien
+ssh muy
+cd /home/ec2-user/muybien
 sed -i 's/DOMAIN_PLACEHOLDER/yourdomain.com/g' nginx/conf.d/production.conf
 ```
 
@@ -171,7 +171,7 @@ make prod-deploy
 
 `deploy.sh` の処理内容：
 
-1. SSH 接続テスト（`pfweb`）
+1. SSH 接続テスト（`muy`）
 2. フロントエンドビルド（`npm run build` → `myapp-web/app/dist/`）
 3. rsync でサーバーへファイル転送
 4. サーバー上で `scripts/deploy_lightsail.sh` を実行
@@ -180,7 +180,7 @@ make prod-deploy
 ### デプロイ後の確認
 
 ```bash
-ssh pfweb 'cd /home/ubuntu/muybien && docker compose -f docker-compose.prod.yml ps'
+ssh muy 'cd /home/ec2-user/muybien && docker compose -f docker-compose.prod.yml ps'
 make prod-logs
 ```
 
@@ -229,7 +229,7 @@ dig +short yourdomain.com A
 サーバー上で直接操作する場合：
 
 ```bash
-cd /home/ubuntu/muybien
+cd /home/ec2-user/muybien
 docker compose -f docker-compose.prod.yml logs --tail=50 myapp-api
 docker compose -f docker-compose.prod.yml restart myapp-api
 docker exec muybien-api python manage.py createsuperuser
@@ -246,7 +246,7 @@ docker exec muybien-api python manage.py createsuperuser
 chmod 400 ~/.ssh/your-key.pem
 
 # 接続テスト
-ssh -vvv pfweb
+ssh -vvv muy
 ```
 
 Lightsail コンソールでポート 22（SSH）が開いているか確認。
@@ -254,9 +254,9 @@ Lightsail コンソールでポート 22（SSH）が開いているか確認。
 ### デプロイ後にサイトが表示されない
 
 ```bash
-ssh pfweb 'cd /home/ubuntu/muybien && docker compose -f docker-compose.prod.yml ps'
-ssh pfweb 'docker logs muybien-nginx --tail=30'
-ssh pfweb 'docker logs muybien-api --tail=30'
+ssh muy 'cd /home/ec2-user/muybien && docker compose -f docker-compose.prod.yml ps'
+ssh muy 'docker logs muybien-nginx --tail=30'
+ssh muy 'docker logs muybien-api --tail=30'
 ```
 
 - コンテナが `Exited` ならログを確認
@@ -266,8 +266,8 @@ ssh pfweb 'docker logs muybien-api --tail=30'
 ### 502 Bad Gateway
 
 ```bash
-ssh pfweb 'docker compose -f docker-compose.prod.yml restart myapp-api'
-ssh pfweb 'docker logs muybien-api --tail=50'
+ssh muy 'docker compose -f docker-compose.prod.yml restart myapp-api'
+ssh muy 'docker logs muybien-api --tail=50'
 ```
 
 API コンテナの起動失敗（DB 接続エラー、SECRET_KEY 未設定等）が多い原因です。
@@ -296,7 +296,7 @@ API コンテナの起動失敗（DB 接続エラー、SECRET_KEY 未設定等�
 
 - [ ] Lightsail インスタンスが起動している
 - [ ] 静的 IP アドレスが割り当てられている
-- [ ] SSH 接続ができる（`ssh pfweb`）
+- [ ] SSH 接続ができる（`ssh muy`）
 - [ ] `setup_lightsail.sh` を実行済み
 - [ ] `.env.prod` が正しく設定されている
 - [ ] nginx の `DOMAIN_PLACEHOLDER` を置換済み（または `PROD_DOMAIN` 指定）

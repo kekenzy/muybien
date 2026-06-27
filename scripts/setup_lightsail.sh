@@ -1,13 +1,9 @@
 #!/bin/bash
-# AWS Lightsail 初回セットアップスクリプト
-# Lightsail インスタンス上で実行する（SSH 接続後）
+# AWS EC2 初回セットアップスクリプト（Amazon Linux / Ubuntu 対応）
+# EC2 インスタンス上で実行する（SSH 接続後）
 #
 # 使い方:
-#   scp -r scripts/ pfweb:/tmp/muybien-scripts
-#   ssh pfweb 'bash /tmp/muybien-scripts/setup_lightsail.sh'
-#
-# または rsync 後:
-#   ssh pfweb 'cd /home/ubuntu/muybien && bash scripts/setup_lightsail.sh'
+#   ssh muy 'cd /home/ec2-user/muybien && bash scripts/setup_lightsail.sh'
 
 set -e
 
@@ -15,53 +11,65 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=config.sh
 source "$SCRIPT_DIR/config.sh"
 
-echo "🚀 AWS Lightsail 初回セットアップを開始します..."
+echo "🚀 EC2 初回セットアップを開始します..."
 
-# root 権限が必要な処理
 if [ "$(id -u)" -eq 0 ]; then
     SUDO=""
 else
     SUDO="sudo"
 fi
 
-# システムアップデート
+# OS 判定
+if [ -f /etc/os-release ]; then
+    # shellcheck source=/dev/null
+    . /etc/os-release
+fi
+
 echo "📦 システムをアップデート中..."
-export DEBIAN_FRONTEND=noninteractive
-$SUDO apt-get update -qq
-$SUDO apt-get upgrade -y -qq
+if command -v dnf &>/dev/null; then
+    $SUDO dnf update -y -q || echo "⚠️  システムアップデートをスキップしました（パッケージ競合等）"
+    $SUDO dnf install -y -q git rsync openssl || $SUDO dnf install -y -q git rsync openssl --allowerasing || true
+elif command -v apt-get &>/dev/null; then
+    export DEBIAN_FRONTEND=noninteractive
+    $SUDO apt-get update -qq
+    $SUDO apt-get upgrade -y -qq
+    $SUDO apt-get install -y -qq ca-certificates curl git rsync openssl
+else
+    echo "❌ サポートされていない OS です"
+    exit 1
+fi
 
-# 必要パッケージ
-echo "📦 必要なパッケージをインストール中..."
-$SUDO apt-get install -y -qq \
-    ca-certificates \
-    curl \
-    git \
-    rsync \
-    ufw
-
-# Docker インストール（未インストールの場合）
+# Docker インストール（Amazon Linux / Ubuntu）
 if ! command -v docker &>/dev/null; then
     echo "🐳 Docker をインストール中..."
-    curl -fsSL https://get.docker.com | $SUDO sh
-    $SUDO usermod -aG docker "${USER:-ubuntu}" || true
+    if command -v dnf &>/dev/null; then
+        $SUDO dnf install -y -q docker
+        $SUDO systemctl enable --now docker
+        # Compose プラグイン
+        $SUDO mkdir -p /usr/local/lib/docker/cli-plugins
+        $SUDO curl -fsSL https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-x86_64 \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+        $SUDO chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+    else
+        curl -fsSL https://get.docker.com | $SUDO sh
+    fi
+    $SUDO usermod -aG docker "${USER:-ec2-user}" || true
     echo "✅ Docker をインストールしました"
     echo "   ※ docker グループ反映のため、一度ログアウトして再接続してください"
 else
     echo "✅ Docker は既にインストール済みです"
 fi
 
-# Docker Compose v2 確認
-if docker compose version &>/dev/null; then
-    echo "✅ Docker Compose v2: $(docker compose version --short)"
-else
-    echo "❌ Docker Compose v2 が見つかりません。Docker の再インストールを確認してください。"
+if ! sudo docker compose version &>/dev/null; then
+    echo "❌ Docker Compose v2 が見つかりません"
     exit 1
 fi
+echo "✅ Docker Compose v2: $(sudo docker compose version --short)"
 
-# プロジェクトディレクトリ作成
-echo "📁 プロジェクトディレクトリを作成: ${PROD_DIR}"
+# プロジェクトディレクトリ
+echo "📁 プロジェクトディレクトリ: ${PROD_DIR}"
 $SUDO mkdir -p "$PROD_DIR"
-$SUDO chown -R "${USER:-ubuntu}:${USER:-ubuntu}" "$PROD_DIR"
+$SUDO chown -R "${USER:-ec2-user}:${USER:-ec2-user}" "$PROD_DIR"
 
 # .env.prod 作成
 ENV_FILE="${PROD_DIR}/.env.prod"
@@ -72,11 +80,10 @@ if [ ! -f "$ENV_FILE" ]; then
     elif [ -f "${SCRIPT_DIR}/../env.prod.example" ]; then
         cp "${SCRIPT_DIR}/../env.prod.example" "$ENV_FILE"
     else
-        echo "❌ env.prod.example が見つかりません。先に deploy.sh でファイルを転送してください。"
+        echo "❌ env.prod.example が見つかりません"
         exit 1
     fi
 
-    # SECRET_KEY / DB パスワードを自動生成
     python3 << PYEOF
 import secrets
 import re
@@ -86,48 +93,27 @@ env_path = Path("${ENV_FILE}")
 content = env_path.read_text()
 content = content.replace("your-secret-key-here", secrets.token_urlsafe(50))
 content = re.sub(r"strong-password-here", secrets.token_urlsafe(18), content)
+content = content.replace(
+    "yourdomain.com,www.yourdomain.com",
+    "57.182.190.160,localhost"
+)
+content = content.replace(
+    "https://yourdomain.com,https://www.yourdomain.com",
+    "http://57.182.190.160,https://57.182.190.160"
+)
 env_path.write_text(content)
 PYEOF
 
     echo "✅ .env.prod を作成しました"
-    echo "⚠️  ${ENV_FILE} を編集して ALLOWED_HOSTS / CORS / メール設定を確認してください"
+    echo "⚠️  ${ENV_FILE} を編集してメール設定等を確認してください"
 else
     echo "✅ .env.prod は既に存在します"
-fi
-
-# ファイアウォール設定
-echo "🔥 ファイアウォールを設定中..."
-if command -v ufw &>/dev/null; then
-    $SUDO ufw allow OpenSSH
-    $SUDO ufw allow 80/tcp
-    $SUDO ufw allow 443/tcp
-    # docker-compose.prod.yml のポートマッピング（8090/8453）を使う場合
-    $SUDO ufw allow 8090/tcp
-    $SUDO ufw allow 8453/tcp
-    echo "y" | $SUDO ufw enable || true
-    echo "✅ ファイアウォールを設定しました"
-fi
-
-# Let's Encrypt 用 certbot（オプション）
-if ! command -v certbot &>/dev/null; then
-    echo "📜 certbot をインストール中（SSL 証明書取得用）..."
-    $SUDO apt-get install -y -qq certbot
 fi
 
 echo ""
 echo "✅ 初回セットアップが完了しました！"
 echo ""
 echo "次のステップ:"
-echo "  1. ${ENV_FILE} を編集（ALLOWED_HOSTS, CORS, SES 等）"
-if [ -n "$PROD_DOMAIN" ]; then
-    echo "  2. SSL 証明書取得:"
-    echo "     sudo certbot certonly --standalone -d ${PROD_DOMAIN}"
-    echo "  3. nginx/conf.d/production.conf の DOMAIN_PLACEHOLDER を ${PROD_DOMAIN} に置換"
-else
-    echo "  2. PROD_DOMAIN を設定して nginx / SSL を構成"
-    echo "     例: PROD_DOMAIN=yourdomain.com bash scripts/deploy_lightsail.sh"
-fi
-echo "  4. ローカルからデプロイ:"
-echo "     make prod-deploy"
+echo "  1. ローカルから: make prod-deploy"
+echo "  2. EC2 セキュリティグループで TCP 80 / 443 を開放"
 echo ""
-echo "🎉 準備完了！"

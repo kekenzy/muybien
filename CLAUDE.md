@@ -74,8 +74,8 @@ make build-front     # フロントのプロダクションビルド
 
 ## Production Deployment
 
-- サーバー: AWS Lightsail (SSH alias: `pfweb`)
-- デプロイ先: `/home/ubuntu/muybien`
+- サーバー: AWS EC2 (SSH alias: `muy`, ユーザー: `ec2-user`)
+- デプロイ先: `/home/ec2-user/muybien`
 - **詳細ドキュメント**: [DOCUMENTATION.md](DOCUMENTATION.md) → [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ```bash

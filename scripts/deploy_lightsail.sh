@@ -20,7 +20,25 @@ if [ ! -f ".env.prod" ]; then
     exit 1
 fi
 
-# nginx ドメイン置換（初回のみ）
+# 自己署名 SSL（IP 直アクセス用）
+SSL_DIR="nginx/ssl"
+if [ ! -f "${SSL_DIR}/selfsigned.crt" ] || [ ! -f "${SSL_DIR}/selfsigned.key" ]; then
+    echo "📜 自己署名 SSL 証明書を生成中..."
+    mkdir -p "$SSL_DIR"
+    openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
+        -keyout "${SSL_DIR}/selfsigned.key" \
+        -out "${SSL_DIR}/selfsigned.crt" \
+        -subj "/CN=muybien" 2>/dev/null
+fi
+
+# フロントビルド成果物の確認
+if [ ! -f "myapp-web/app/dist/index.html" ]; then
+    echo "❌ myapp-web/app/dist/index.html が見つかりません。"
+    echo "   ローカルで npm run build 後、make prod-deploy を実行してください。"
+    exit 1
+fi
+
+# nginx ドメイン置換（Let's Encrypt 用・将来のドメイン設定時）
 NGINX_CONF="nginx/conf.d/production.conf"
 if [ -n "$PROD_DOMAIN" ] && grep -q "DOMAIN_PLACEHOLDER" "$NGINX_CONF" 2>/dev/null; then
     echo "⚙️  nginx 設定にドメインを反映: ${PROD_DOMAIN}"
@@ -34,14 +52,20 @@ if ! command -v docker &>/dev/null; then
     exit 1
 fi
 
-if ! docker compose version &>/dev/null; then
+# Docker コマンド（グループ未反映時は sudo）
+DOCKER="docker"
+if ! docker info &>/dev/null 2>&1; then
+    DOCKER="sudo docker"
+fi
+
+if ! $DOCKER compose version &>/dev/null; then
     echo "❌ Docker Compose v2 が利用できません。"
     exit 1
 fi
 
 # コンテナ起動
 echo "🐳 Docker コンテナをビルド・起動中..."
-docker compose -f "$COMPOSE_FILE" up --build -d
+$DOCKER compose -f "$COMPOSE_FILE" up --build -d
 
 # 起動待ち
 echo "⏳ コンテナの起動を待機中..."
@@ -50,10 +74,10 @@ sleep 5
 # 状態確認
 echo ""
 echo "📊 コンテナ状態:"
-docker compose -f "$COMPOSE_FILE" ps
+$DOCKER compose -f "$COMPOSE_FILE" ps
 
 # ヘルスチェック
-if docker compose -f "$COMPOSE_FILE" ps --status running | grep -q muybien-api; then
+if $DOCKER compose -f "$COMPOSE_FILE" ps --status running | grep -q muybien-api; then
     echo ""
     echo "✅ API コンテナは起動しています"
 else

@@ -71,8 +71,8 @@ CSS フレームワークは **Tailwind CSS 4** を使用。Vue コンポーネ�
 | フロント | Vue SPA（ビルド済み `dist/`） | デプロイ前にローカルで `npm run build` |
 
 - デプロイ方式: ローカルから **rsync** + **docker compose**
-- SSH エイリアス: `pfweb`
-- デプロイ先: `/home/ubuntu/muybien`
+- SSH エイリアス: `muy`（ユーザー: `ec2-user`）
+- デプロイ先: `/home/ec2-user/muybien`
 
 ### ディレクトリ構成
 

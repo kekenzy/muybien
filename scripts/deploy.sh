@@ -17,9 +17,9 @@ if ! ssh -o ConnectTimeout=10 "${SSH_HOST}" "echo 'SSH接続成功'" 2>/dev/null
     echo "❌ SSH 接続に失敗しました。~/.ssh/config を確認してください。"
     echo ""
     echo "   例:"
-    echo "   Host pfweb"
-    echo "     HostName YOUR_LIGHTSAIL_IP"
-    echo "     User ubuntu"
+    echo "   Host muy"
+    echo "     HostName YOUR_SERVER_IP"
+    echo "     User ec2-user"
     echo "     IdentityFile ~/.ssh/your-key.pem"
     exit 1
 fi
@@ -28,7 +28,8 @@ echo "✅ SSH 接続成功"
 # フロントエンドビルド
 echo "📦 フロントエンドをビルド中..."
 cd "$PROJECT_ROOT/myapp-web/app"
-if [ ! -d node_modules ]; then
+if [ ! -f node_modules/.bin/vite ]; then
+    echo "📥 npm install を実行中..."
     npm install
 fi
 npm run build
