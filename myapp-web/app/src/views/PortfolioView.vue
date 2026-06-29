@@ -25,6 +25,15 @@
               {{ tag }}
             </span>
           </div>
+          <a
+            v-if="work.url"
+            :href="work.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            サイトを見る →
+          </a>
         </div>
       </div>
     </div>
@@ -44,10 +53,11 @@ const works = [
   },
   {
     icon: CalendarCheck,
-    title: '予約・決済システム',
+    title: 'よみひろ館 — 予約・決済システム',
     period: '2023',
-    desc: 'Django + Square API連携による予約管理。SMS通知・キャンセル自動処理・売上レポートを実装。',
+    desc: 'Django + Square API 連携による旅館向けオンライン予約管理。クレジット決済・SMS通知・キャンセル自動処理・売上レポートを実装。本番運用中。',
     tags: ['Django', 'Square API', 'AWS SES', 'Lightsail'],
+    url: 'https://yomohirokan.com/',
   },
   {
     icon: BotMessageSquare,

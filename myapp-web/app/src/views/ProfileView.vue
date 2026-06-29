@@ -11,9 +11,16 @@
           永井 謙史
         </h1>
         <p class="text-white/50 text-lg md:text-xl max-w-xl leading-relaxed">
-          AI × Django × AWS で、アイデアを最速でプロダクトに変えるエンジニア・ディレクター。<br class="hidden md:block">
-          新しいものを立ち上げるのが、いちばん好きです。
+          AI × Django × AWS で、アイデアを最速でプロダクトに変えるFDE(Forward Deployed Engineer)。ITの力をより身近に。
         </p>
+        <a
+          href="https://kenzy-goldentime.blogspot.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 mt-8 text-sm text-white/50 hover:text-white transition-colors"
+        >
+          📝 Fly Away（ブログ） →
+        </a>
       </div>
     </section>
 
@@ -193,16 +200,25 @@ const career = [
   {
     year: '2021〜現在',
     company: 'Globalway — PF事業部ディレクター',
-    desc: 'Python / Django へ転向し Web サービス開発に専念。複数の大手 NTT 系案件を担当しながら、AI 活用・クラウドインフラ・チームマネジメントも推進。PF2 グループリーダーとして新規顧客開拓を牽引。',
+    desc: 'Python / Django へ転向し Web サービス開発に専念。複数の大手 通信会社系案件を担当しながら、AI 活用・クラウドインフラ・チームマネジメントも推進。ディレクタとして新規顧客開拓を牽引。',
     projects: [
-      'NTT東日本 マネージドラン', 'NTT西日本 ビジネスマイページ',
-      'NTTドコモビジネス', 'TKG', '東京個別指導学院',
+      '某大手通信会社 トラフィックレポート', '某大手通信会社マイページ',
+      '個別指導塾',
       'Python / Django', 'AWS', 'AI活用推進',
     ],
   },
 ]
 
 const apps = [
+  {
+    emoji: '🏨',
+    title: 'よみひろ館',
+    category: '予約・決済',
+    date: '2023年',
+    desc: '旅館向けオンライン予約・決済システム。Square API 連携でクレジット決済に対応し、SMS通知・キャンセル自動処理・売上レポートを実装。Django + AWS で本番運用中。',
+    tags: ['Django', 'Square API', 'AWS Lightsail', 'PostgreSQL', 'SMS通知'],
+    url: 'https://yomohirokan.com/',
+  },
   {
     emoji: '👾',
     title: 'モンスタースイーパー',
@@ -214,9 +230,31 @@ const apps = [
   },
 ]
 
-const skills = [
-  'Python', 'Django REST Framework', 'Vue 3', 'TypeScript', 'Tailwind CSS',
-  'Claude / GPT-4', 'RAG / プロンプト設計', 'AWS Lightsail', 'PostgreSQL',
-  'Docker', 'Nginx', 'Cursor IDE', 'AI駆動開発',
+const skillGroups = [
+  {
+    label: 'Backend',
+    primary: true,
+    items: ['Python', 'Django', 'Django REST Framework', 'PostgreSQL', 'Square API'],
+  },
+  {
+    label: 'Frontend',
+    primary: true,
+    items: ['Vue 3', 'TypeScript', 'Tailwind CSS', 'Vite'],
+  },
+  {
+    label: 'Cloud / Infra',
+    primary: false,
+    items: ['AWS Lightsail', 'AWS SES', 'AWS S3', 'Docker', 'Nginx', 'Linux'],
+  },
+  {
+    label: 'AI',
+    primary: false,
+    items: ['Claude API', 'GPT-4', 'RAG', 'プロンプト設計', 'Cursor IDE', 'AI駆動開発'],
+  },
+  {
+    label: 'Past Experience',
+    primary: false,
+    items: ['Java', 'C', 'C++', 'C#', 'Swift', 'Android', 'iOS', 'Raspberry Pi', 'Chart.js'],
+  },
 ]
 </script>

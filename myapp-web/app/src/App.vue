@@ -1,5 +1,8 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-white text-gray-900">
+  <div v-if="isLabRoute" class="min-h-screen">
+    <router-view />
+  </div>
+  <div v-else class="min-h-screen flex flex-col bg-white text-gray-900">
     <!-- Header -->
     <header class="sticky top-0 z-50 border-b border-white/10 bg-[#080c14]/80 backdrop-blur">
       <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -37,6 +40,12 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const isLabRoute = computed(() => route.path.startsWith('/lab'))
+
 const navItems = [
   { label: 'ホーム', to: '/' },
   { label: 'プロフィール', to: '/profile' },

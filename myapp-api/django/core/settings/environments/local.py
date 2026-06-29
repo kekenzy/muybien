@@ -1,6 +1,8 @@
 from core.settings.common import *  # noqa
+import os
 
 DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-insecure-secret-key-for-local-only')
 
 DATABASES = {
     'default': {

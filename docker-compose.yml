@@ -11,6 +11,7 @@ services:
       - "8000:8000"
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings.environments.local
+      - SECRET_KEY=dev-insecure-secret-key-for-local-only
       - RDS_DB_NAME=muybiendb
       - RDS_USERNAME=postgres
       - RDS_PASSWORD=password
