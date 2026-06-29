@@ -1,6 +1,9 @@
 API_CONTAINER=muybien-api
 WEB_CONTAINER=muybien-web
 
+# docker グループ未所属時は sudo（本番サーバー等）
+DOCKER := $(shell docker info >/dev/null 2>&1 && echo docker || echo sudo docker)
+
 # ─────────────────────────────────────────
 # ローカル開発
 # ─────────────────────────────────────────
@@ -19,23 +22,23 @@ db-up:
 init-db:
 	@echo "DB の起動を待機中..."
 	@i=0; while [ $$i -lt 30 ]; do \
-		docker exec muybien-db pg_isready -U postgres >/dev/null 2>&1 && break; \
+		$(DOCKER) exec muybien-db pg_isready -U postgres >/dev/null 2>&1 && break; \
 		i=$$((i + 1)); sleep 1; \
 	done
-	@docker exec muybien-db pg_isready -U postgres >/dev/null 2>&1 \
+	@$(DOCKER) exec muybien-db pg_isready -U postgres >/dev/null 2>&1 \
 		|| (echo "❌ muybien-db が起動していません。make up を実行してください。" && exit 1)
-	@docker exec muybien-db psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'muybiendb'" | grep -q 1 \
-		|| docker exec muybien-db psql -U postgres -c "CREATE DATABASE muybiendb;"
+	@$(DOCKER) exec muybien-db psql -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'muybiendb'" | grep -q 1 \
+		|| $(DOCKER) exec muybien-db psql -U postgres -c "CREATE DATABASE muybiendb;"
 	@echo "DB muybiendb を確認しました"
 
 migrate: init-db
-	docker exec $(API_CONTAINER) python manage.py migrate
+	$(DOCKER) exec $(API_CONTAINER) python manage.py migrate
 
 makemigrations:
-	docker exec $(API_CONTAINER) python manage.py makemigrations
+	$(DOCKER) exec $(API_CONTAINER) python manage.py makemigrations
 
 createsuperuser:
-	docker exec -it $(API_CONTAINER) python manage.py createsuperuser
+	$(DOCKER) exec -it $(API_CONTAINER) python manage.py createsuperuser
 
 down:
 	docker-compose --profile db down
@@ -46,13 +49,13 @@ logs:
 	docker-compose logs -f --tail=200
 
 api-logs:
-	docker logs -f $(API_CONTAINER)
+	$(DOCKER) logs -f $(API_CONTAINER)
 
 api-bash:
-	docker exec -it $(API_CONTAINER) bash
+	$(DOCKER) exec -it $(API_CONTAINER) bash
 
 web-bash:
-	docker exec -it $(WEB_CONTAINER) sh
+	$(DOCKER) exec -it $(WEB_CONTAINER) sh
 
 # ─────────────────────────────────────────
 # フロントエンドビルド（デプロイ前に実行）
@@ -71,6 +74,9 @@ prod-logs:
 
 prod-migrate:
 	@bash scripts/prod-migrate.sh
+
+prod-createsuperuser:
+	@bash scripts/prod-createsuperuser.sh
 
 prod-bash:
 	@bash scripts/prod-bash.sh
