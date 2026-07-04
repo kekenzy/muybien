@@ -53,7 +53,7 @@ const works = [
   },
   {
     icon: CalendarCheck,
-    title: 'よみひろ館 — 予約・決済システム',
+    title: '東西南北（よもひろ）館 — 予約・決済システム',
     period: '2023',
     desc: 'Django + Square API 連携による旅館向けオンライン予約管理。クレジット決済・SMS通知・キャンセル自動処理・売上レポートを実装。本番運用中。',
     tags: ['Django', 'Square API', 'AWS SES', 'Lightsail'],

@@ -95,7 +95,7 @@
                 v-if="app.icon"
                 :src="app.icon"
                 :alt="app.title"
-                class="w-12 h-12 rounded-xl"
+                class="h-12 w-auto object-contain rounded-xl"
               />
               <span v-else class="text-2xl">{{ app.emoji }}</span>
             </div>
@@ -226,11 +226,12 @@ const career = [
 
 const apps = [
   {
-    emoji: '🏨',
-    title: 'よみひろ館',
+    icon: '/images/yomohiro-kan-icon.png',
+    title: '東西南北（よもひろ）館',
     category: '予約・決済',
     date: '2023年',
     desc: '旅館向けオンライン予約・決済システム。Square API 連携でクレジット決済に対応し、SMS通知・キャンセル自動処理・売上レポートを実装。Django + AWS で本番運用中。',
+    screenshot: '/images/yomohiro-kan-screenshot.png',
     tags: ['Django', 'Square API', 'AWS Lightsail', 'PostgreSQL', 'SMS通知'],
     url: 'https://yomohirokan.com/',
   },
