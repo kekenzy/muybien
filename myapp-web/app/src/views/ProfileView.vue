@@ -1,16 +1,16 @@
 <template>
   <div>
     <!-- Hero -->
-    <section class="relative py-32 px-6 bg-[#080c14] overflow-hidden">
+    <section class="relative py-20 sm:py-32 px-4 sm:px-6 bg-[#080c14] overflow-hidden">
       <div class="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:48px_48px]" />
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px] pointer-events-none" />
 
       <div class="relative max-w-4xl mx-auto">
         <span class="text-xs font-semibold tracking-widest text-primary uppercase">Profile</span>
-        <h1 class="text-5xl md:text-7xl font-black text-white mt-4 mb-6 leading-tight">
+        <h1 class="text-4xl sm:text-5xl md:text-7xl font-black text-white mt-4 mb-6 leading-tight">
           永井 謙史
         </h1>
-        <p class="text-white/50 text-lg md:text-xl max-w-xl leading-relaxed">
+        <p class="text-white/50 text-base sm:text-lg md:text-xl max-w-xl leading-relaxed">
           AI × Django × AWS で、アイデアを最速でプロダクトに変えるFDE(Forward Deployed Engineer)。ITの力をより身近に。
         </p>
         <a
@@ -54,9 +54,9 @@
           <h2 class="text-3xl font-bold mt-2 text-gray-900">キャリア</h2>
         </div>
 
-        <div class="relative pl-8 border-l-2 border-gray-200 space-y-12">
+        <div class="relative pl-6 sm:pl-8 border-l-2 border-gray-200 space-y-10 sm:space-y-12">
           <div v-for="item in career" :key="item.year" class="relative">
-            <div class="absolute -left-[2.35rem] w-4 h-4 bg-primary rounded-full border-4 border-white shadow" />
+            <div class="absolute -left-[1.65rem] sm:-left-[2.35rem] w-3.5 h-3.5 sm:w-4 sm:h-4 bg-primary rounded-full border-4 border-white shadow" />
             <div class="text-xs font-semibold text-primary mb-1">{{ item.year }}</div>
             <div class="font-bold text-gray-900 text-lg mb-1">{{ item.company }}</div>
             <div class="text-sm text-gray-500 leading-relaxed mb-4">{{ item.desc }}</div>
@@ -90,9 +90,24 @@
               <span class="text-xs font-semibold text-primary bg-blue-50 px-3 py-1 rounded-full">{{ app.category }}</span>
               <span class="text-xs text-gray-400">{{ app.date }}</span>
             </div>
-            <div class="text-2xl mb-2">{{ app.emoji }}</div>
+            <div class="mb-2">
+              <img
+                v-if="app.icon"
+                :src="app.icon"
+                :alt="app.title"
+                class="w-12 h-12 rounded-xl"
+              />
+              <span v-else class="text-2xl">{{ app.emoji }}</span>
+            </div>
             <h3 class="font-semibold text-lg text-gray-900 mb-2">{{ app.title }}</h3>
-            <p class="text-sm text-gray-500 leading-relaxed flex-1">{{ app.desc }}</p>
+            <p class="text-sm text-gray-500 leading-relaxed">{{ app.desc }}</p>
+            <img
+              v-if="app.screenshot"
+              :src="app.screenshot"
+              :alt="`${app.title}のゲーム画面`"
+              class="mt-4 w-full rounded-xl border border-gray-100"
+            />
+            <div class="flex-1" />
             <div class="flex flex-wrap gap-2 mt-4">
               <span
                 v-for="tag in app.tags"
@@ -145,7 +160,7 @@
     <!-- CTA -->
     <section class="py-24 px-6 bg-[#080c14]">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-4xl font-black text-white mb-6 leading-tight">
+        <h2 class="text-3xl sm:text-4xl font-black text-white mb-6 leading-tight">
           一緒に何か<br>つくりませんか？
         </h2>
         <p class="text-white/40 mb-10">初回相談は無料。気軽にメッセージください。</p>
@@ -220,11 +235,12 @@ const apps = [
     url: 'https://yomohirokan.com/',
   },
   {
-    emoji: '👾',
+    icon: '/images/monster-sweeper-icon.png',
     title: 'モンスタースイーパー',
     category: 'パズルゲーム',
     date: '2016年3月',
     desc: '罠をしかけてモンスターを倒す、新感覚マインスイーパーRPG。ダジャモン（ダジャレモンスター）を探し出して図鑑コンプリートを目指す。STELLA STUDIO として個人開発・リリース。',
+    screenshot: '/images/monster-sweeper-screenshot.png',
     tags: ['Android', 'マインスイーパー', 'RPG', '個人開発'],
     url: 'https://appget.com/appli/view/62986/',
   },

@@ -7,21 +7,21 @@
       <!-- グロー -->
       <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
 
-      <div class="relative max-w-5xl mx-auto px-6 py-32 w-full">
-        <div class="inline-flex items-center gap-2 border border-white/10 bg-white/5 text-white/60 text-xs px-4 py-2 rounded-full mb-10 backdrop-blur">
+      <div class="relative max-w-5xl mx-auto px-4 sm:px-6 py-24 sm:py-32 w-full">
+        <div class="inline-flex items-center gap-2 border border-white/10 bg-white/5 text-white/60 text-xs px-4 py-2 rounded-full mb-8 sm:mb-10 backdrop-blur">
           <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
           フリーランス受付中
         </div>
 
-        <h1 class="text-5xl md:text-8xl font-black text-white leading-[1.05] tracking-tight mb-8">
+        <h1 class="text-4xl sm:text-5xl md:text-8xl font-black text-white leading-[1.05] tracking-tight mb-6 sm:mb-8">
           Build Faster.<br>
           <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
             Ship Smarter.
           </span>
         </h1>
 
-        <p class="text-white/50 text-lg md:text-xl max-w-xl mb-12 leading-relaxed">
-          AI × Django × AWS で、あなたのプロダクトを<br class="hidden md:block">
+        <p class="text-white/50 text-base sm:text-lg md:text-xl max-w-xl mb-10 sm:mb-12 leading-relaxed">
+          AI × Django × AWS で、あなたのプロダクトを<br class="hidden sm:block">
           最速で動かすエンジニア。
         </p>
 
@@ -42,9 +42,9 @@
         </div>
 
         <!-- Stats -->
-        <div class="flex flex-wrap gap-10 mt-20 border-t border-white/10 pt-10">
+        <div class="flex flex-wrap gap-6 sm:gap-10 mt-16 sm:mt-20 border-t border-white/10 pt-8 sm:pt-10">
           <div v-for="stat in stats" :key="stat.label">
-            <div class="text-3xl font-black text-white">{{ stat.value }}</div>
+            <div class="text-2xl sm:text-3xl font-black text-white">{{ stat.value }}</div>
             <div class="text-white/40 text-xs mt-1">{{ stat.label }}</div>
           </div>
         </div>
@@ -75,7 +75,7 @@
     <!-- CTA -->
     <section class="py-24 px-6 bg-[#080c14]">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-4xl md:text-5xl font-black text-white mb-6 leading-tight">
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6 leading-tight">
           一緒に、速く<br>つくりましょう。
         </h2>
         <p class="text-white/40 mb-10">初回相談は無料。まずは気軽に話しかけてください。</p>
