@@ -40,7 +40,7 @@ Django REST API + Vue 3 SPA 構成。**スタイルは Tailwind CSS 4**（ユー
 | DB | PostgreSQL 16.2 | 15433（ホスト側） |
 
 - フロント → API は Vite の dev proxy（`/v1/api` → `http://myapp-api:8000`）
-- 認証なし（AllowAny）
+- 公開 API（コンタクト）は認証なし（AllowAny）。管理者用の「永井のLab」は JWT 認証
 
 ### フロントエンド・スタイリング
 
@@ -80,6 +80,7 @@ CSS フレームワークは **Tailwind CSS 4** を使用。Vue コンポーネ�
 MuyBienBase/
 ├── myapp-api/django/     # Django バックエンド
 │   ├── contact/          # コンタクトフォーム API
+│   ├── lab/              # 管理者用 Lab API（JWT）
 │   └── core/settings/    # 設定（local / production）
 ├── myapp-web/app/        # Vue 3 フロントエンド
 ├── nginx/conf.d/         # Nginx 設定（local / production）
@@ -101,12 +102,47 @@ MuyBienBase/
 | ポートフォリオ | `/portfolio` | 実績紹介 |
 | プロフィール | `/profile` | プロフィール |
 | お問い合わせ | `/contact` | コンタクトフォーム |
+| 永井のLab（ログイン） | `/lab/login` | 管理者ログイン（JWT） |
+| 永井のLab | `/lab` | お問い合わせ一覧（要ログイン） |
+
+### 永井のLab（管理者ログイン）
+
+公開サイトとは別に、お問い合わせ内容を確認する **管理者 UI** があります。
+
+| 項目 | 内容 |
+|------|------|
+| 認証方式 | JWT（Django スーパーユーザー） |
+| ログイン画面 | `/lab/login` |
+| ダッシュボード | `/lab`（お問い合わせ一覧） |
+| 用途 | コンタクトフォームの受信内容確認 |
+
+**初回はスーパーユーザー作成が必要です。**
+
+```bash
+# ローカル
+make createsuperuser
+
+# 本番
+make prod-createsuperuser
+# または
+ssh muy
+cd /home/ec2-user/muybien
+sudo docker exec -it muybien-api python manage.py createsuperuser
+```
+
+本番 URL 例: `https://muybien.jp/lab/login`  
+詳細（本番作業）は [PRODUCTION.md](PRODUCTION.md) の「スーパーユーザー / 永井のLab」を参照。
 
 ### API
 
 | Method | Path | 説明 |
 |--------|------|------|
 | POST | `/v1/api/contact` | お問い合わせ送信（DB 保存 + メール通知） |
+| POST | `/v1/api/auth/login` | Lab ログイン（JWT 取得） |
+| POST | `/v1/api/auth/refresh` | JWT リフレッシュ |
+| GET | `/v1/api/auth/me` | ログイン中ユーザー情報 |
+| GET | `/v1/api/lab/contacts` | お問い合わせ一覧（要認証） |
+| GET | `/v1/api/lab/contacts/<id>` | お問い合わせ詳細（要認証） |
 
 ※ trailing_slash なし。
 
@@ -132,6 +168,7 @@ make down      # 停止
 | 用途 | URL |
 |------|-----|
 | フロント | http://localhost:5173 |
+| Lab ログイン | http://localhost:5173/lab/login |
 | API | http://localhost:8000/v1/api/contact |
 | Django Admin | http://localhost:8000/admin/ |
 
@@ -154,11 +191,12 @@ make build-front       # フロントのプロダクションビルド
 
 ```bash
 # 初回: サーバーで setup_lightsail.sh を実行後
-make prod-deploy       # ビルド + rsync + docker compose up
-make prod-logs         # 本番ログ
-make prod-migrate      # 本番マイグレーション
-make prod-bash         # 本番 API シェル
-make prod-down         # 本番停止
+make prod-deploy            # ビルド + rsync + docker compose up
+make prod-logs              # 本番ログ
+make prod-migrate           # 本番マイグレーション
+make prod-createsuperuser   # 本番スーパーユーザー作成（Lab / Admin 用）
+make prod-bash              # 本番 API シェル
+make prod-down              # 本番停止
 ```
 
 ⚠️ **本番 DB のリセットは絶対に行わないこと。**

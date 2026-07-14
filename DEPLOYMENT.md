@@ -223,6 +223,7 @@ dig +short yourdomain.com A
 | `make prod-deploy` | デプロイ（ビルド + 転送 + 起動） |
 | `make prod-logs` | 本番ログ（tail -f） |
 | `make prod-migrate` | 本番マイグレーション |
+| `make prod-createsuperuser` | 本番スーパーユーザー作成（Lab / Admin） |
 | `make prod-bash` | 本番 API コンテナシェル |
 | `make prod-down` | 本番コンテナ停止 |
 
@@ -230,11 +231,12 @@ dig +short yourdomain.com A
 
 ```bash
 cd /home/ec2-user/muybien
-docker compose -f docker-compose.prod.yml logs --tail=50 myapp-api
-docker compose -f docker-compose.prod.yml restart myapp-api
-docker exec muybien-api python manage.py createsuperuser
+sudo docker compose -f docker-compose.prod.yml logs --tail=50 myapp-api
+sudo docker compose -f docker-compose.prod.yml restart myapp-api
+sudo docker exec -it muybien-api python manage.py createsuperuser
 ```
 
+スーパーユーザーは Django Admin（`/admin/`）および **永井のLab**（`/lab/login`）で使用します。詳細は [README.md](README.md) / [PRODUCTION.md](PRODUCTION.md)。
 ---
 
 ## 🔍 7. トラブルシューティング

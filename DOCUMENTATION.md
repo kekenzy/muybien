@@ -43,6 +43,7 @@
 
 - 初期セットアップ: [README.md](README.md)
 - 開発コマンド: [CLAUDE.md](CLAUDE.md)
+- 永井のLab（管理者ログイン）: [README.md](README.md)「永井のLab」、本番のユーザー作成は [PRODUCTION.md](PRODUCTION.md)
 
 ---
 
@@ -55,6 +56,7 @@
 | `scripts/setup_lightsail.sh` | サーバー | 初回セットアップ（Docker 等） |
 | `scripts/prod-logs.sh` | ローカル | 本番ログ表示 |
 | `scripts/prod-migrate.sh` | ローカル | 本番マイグレーション |
+| `scripts/prod-createsuperuser.sh` | ローカル | 本番スーパーユーザー作成（Lab / Admin） |
 | `scripts/prod-bash.sh` | ローカル | 本番 API コンテナシェル |
 | `scripts/prod-down.sh` | ローカル | 本番コンテナ停止 |
 

@@ -4,7 +4,7 @@
       <div class="text-center mb-8">
         <div class="text-4xl mb-3">🔬</div>
         <h1 class="text-2xl font-bold">永井のLab</h1>
-        <p class="text-sm text-white/40 mt-2">管理者ログイン</p>
+        <p class="text-sm text-white/60 mt-2">管理者ログイン</p>
       </div>
 
       <div v-if="errorMsg" class="bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl p-3 text-sm mb-4">
@@ -13,7 +13,7 @@
 
       <form class="space-y-4" @submit.prevent="submit">
         <div>
-          <label class="block text-xs text-white/50 mb-1.5">ユーザー名</label>
+          <label class="block text-xs text-white/70 mb-1.5">ユーザー名</label>
           <input
             v-model="username"
             type="text"
@@ -23,7 +23,7 @@
           />
         </div>
         <div>
-          <label class="block text-xs text-white/50 mb-1.5">パスワード</label>
+          <label class="block text-xs text-white/70 mb-1.5">パスワード</label>
           <input
             v-model="password"
             type="password"
@@ -41,7 +41,7 @@
         </button>
       </form>
 
-      <router-link to="/" class="block text-center text-xs text-white/30 hover:text-white/50 mt-8 transition-colors">
+      <router-link to="/" class="block text-center text-xs text-white/50 hover:text-white/70 mt-8 transition-colors">
         ← サイトに戻る
       </router-link>
     </div>
@@ -52,6 +52,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchMe, login } from '../../lib/api'
+import { setPermissions } from '../../lib/permissions'
 
 const router = useRouter()
 const username = ref('')
@@ -66,6 +67,7 @@ async function submit() {
     await login(username.value, password.value)
     const me = await fetchMe()
     sessionStorage.setItem('lab_username', me.username)
+    setPermissions(me.is_superuser, me.is_staff, me.permissions)
     router.push('/lab')
   } catch {
     errorMsg.value = 'ログインに失敗しました。ユーザー名とパスワードを確認してください。'

@@ -94,6 +94,9 @@ if EMAIL_HOST:
 
 CONTACT_NOTIFY_EMAIL = os.environ.get('CONTACT_NOTIFY_EMAIL', 'kenji.nagai@globalway.co.jp')
 
+# Lab招待メール内のリンク生成に使うフロントエンドのベースURL
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:5173')
+
 LOG_DIR = os.path.join(BASE_DIR, 'log')
 os.makedirs(LOG_DIR, exist_ok=True)
 

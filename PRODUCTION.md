@@ -337,13 +337,27 @@ ssh muy 'sudo docker exec muybien-api python manage.py migrate --noinput'
 
 `collectstatic` も起動コマンドに含まれています。Nginx が `/static/` を配信します。
 
-### 3. スーパーユーザー作成
+### 3. スーパーユーザー / 永井のLab
+
+公開サイトのお問い合わせ管理用に **「永井のLab」**（JWT ログイン）があります。ログインには Django スーパーユーザーが必要です。
+
+| 画面 | URL |
+|------|-----|
+| Lab ログイン | `https://muybien.jp/lab/login` |
+| Lab ダッシュボード | `https://muybien.jp/lab`（お問い合わせ一覧） |
+| Django Admin | `https://muybien.jp/admin/` |
+
+**初回デプロイ後、スーパーユーザー未作成だと Lab にログインできません。** 必ず一度作成してください。
 
 ```bash
+# ローカルから
+make prod-createsuperuser
+
+# または SSH 直接
 ssh muy 'sudo docker exec -it muybien-api python manage.py createsuperuser'
 ```
 
-管理画面: `https://muybien.jp/admin/`
+認証の概要は [README.md](README.md) の「永井のLab（管理者ログイン）」を参照。
 
 ### 4. 環境変数変更後
 
