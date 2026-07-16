@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isLoggedIn } from '../lib/auth'
-import { canRead, type MenuKey } from '../lib/permissions'
+import { clearTokens, isLoggedIn } from '../lib/auth'
+import { isPortalLoggedIn } from '../lib/portalAuth'
+import { canRead, clearPermissions, type MenuKey } from '../lib/permissions'
 import HomeView from '../views/HomeView.vue'
 
 const LAB_MENU_ROUTES: { menuKey: MenuKey; path: string }[] = [
@@ -8,6 +9,7 @@ const LAB_MENU_ROUTES: { menuKey: MenuKey; path: string }[] = [
   { menuKey: 'customers', path: '/lab/customers' },
   { menuKey: 'tasks', path: '/lab/tasks' },
   { menuKey: 'diary', path: '/lab/diary' },
+  { menuKey: 'reservations', path: '/lab/reservations' },
   { menuKey: 'users', path: '/lab/users' },
   { menuKey: 'roles', path: '/lab/roles' },
 ]
@@ -60,6 +62,12 @@ const router = createRouter({
           meta: { requiresAuth: true, menuKey: 'diary' },
         },
         {
+          path: 'reservations',
+          name: 'lab-reservations',
+          component: () => import('../views/lab/LabReservationView.vue'),
+          meta: { requiresAuth: true, menuKey: 'reservations' },
+        },
+        {
           path: 'users',
           name: 'lab-users',
           component: () => import('../views/lab/LabUserView.vue'),
@@ -70,6 +78,35 @@ const router = createRouter({
           name: 'lab-roles',
           component: () => import('../views/lab/LabRoleView.vue'),
           meta: { requiresAuth: true, menuKey: 'roles' },
+        },
+      ],
+    },
+    {
+      path: '/portal',
+      component: () => import('../layouts/PortalLayout.vue'),
+      children: [
+        {
+          path: 'login',
+          name: 'portal-login',
+          component: () => import('../views/portal/PortalLoginView.vue'),
+          meta: { portalGuestOnly: true },
+        },
+        {
+          path: '',
+          name: 'portal-root',
+          redirect: '/portal/reservations',
+        },
+        {
+          path: 'reservations',
+          name: 'portal-reservations',
+          component: () => import('../views/portal/PortalReservationView.vue'),
+          meta: { requiresPortalAuth: true },
+        },
+        {
+          path: 'payment',
+          name: 'portal-payment',
+          component: () => import('../views/portal/PortalPaymentView.vue'),
+          meta: { requiresPortalAuth: true },
         },
       ],
     },
@@ -89,7 +126,19 @@ router.beforeEach((to) => {
   if (menuKey && !canRead(menuKey)) {
     const fallback = LAB_MENU_ROUTES.find((m) => m.menuKey !== menuKey && canRead(m.menuKey))
     if (fallback) return fallback.path
-    return false
+    // 閲覧可能なメニューが一つもない（顧客招待などで作られた無権限アカウント等）場合、
+    // ここで false を返すとURLとルーターの状態が食い違ったまま固まってしまうため、
+    // セッションを破棄してログイン画面に戻す
+    clearTokens()
+    clearPermissions()
+    return '/lab/login'
+  }
+
+  if (to.meta.requiresPortalAuth && !isPortalLoggedIn()) {
+    return '/portal/login'
+  }
+  if (to.meta.portalGuestOnly && isPortalLoggedIn()) {
+    return '/portal/reservations'
   }
 })
 

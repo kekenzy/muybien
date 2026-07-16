@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isLabRoute" class="min-h-screen">
+  <div v-if="isBareRoute" class="min-h-screen">
     <router-view />
   </div>
   <div v-else class="min-h-screen flex flex-col bg-white text-gray-900">
@@ -26,6 +26,12 @@
             class="text-sm border border-white/20 text-white/80 px-4 py-2 rounded-full hover:border-white/50 hover:text-white transition-colors"
           >
             お問い合わせ
+          </router-link>
+          <router-link
+            to="/portal/login"
+            class="text-sm bg-primary text-black px-4 py-2 rounded-full font-medium hover:opacity-90 transition-opacity"
+          >
+            ログイン
           </router-link>
         </nav>
 
@@ -75,6 +81,13 @@
             >
               お問い合わせ
             </router-link>
+            <router-link
+              to="/portal/login"
+              class="text-center bg-primary text-black px-4 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity"
+              @click="closeMenu"
+            >
+              ログイン
+            </router-link>
           </div>
         </nav>
       </Transition>
@@ -96,7 +109,7 @@ import { useRoute } from 'vue-router'
 import { Menu, X } from 'lucide-vue-next'
 
 const route = useRoute()
-const isLabRoute = computed(() => route.path.startsWith('/lab'))
+const isBareRoute = computed(() => route.path.startsWith('/lab') || route.path.startsWith('/portal'))
 const menuOpen = ref(false)
 
 const navItems = [

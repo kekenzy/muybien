@@ -44,6 +44,7 @@
 - 初期セットアップ: [README.md](README.md)
 - 開発コマンド: [CLAUDE.md](CLAUDE.md)
 - 永井のLab（管理者ログイン）: [README.md](README.md)「永井のLab」、本番のユーザー作成は [PRODUCTION.md](PRODUCTION.md)
+- 顧客ポータル（一般ユーザー向けログイン・予約/決済）: [README.md](README.md)「顧客ポータル」、Stripe環境変数は [PRODUCTION.md](PRODUCTION.md)「決済（顧客ポータル・Stripe）」
 
 ---
 

@@ -38,9 +38,10 @@ Django REST API + Vue 3 SPA 構成。**スタイルは Tailwind CSS 4**（ユー
 | フロント | Vue 3 + TypeScript + Vite 5 + Tailwind CSS 4 | 5173 |
 | API | Django 4.2 + DRF | 8000 |
 | DB | PostgreSQL 16.2 | 15433（ホスト側） |
+| メール確認 | Mailpit（SMTP キャッチ） | 8025（Web UI）/ 1025（SMTP） |
 
 - フロント → API は Vite の dev proxy（`/v1/api` → `http://myapp-api:8000`）
-- 公開 API（コンタクト）は認証なし（AllowAny）。管理者用の「永井のLab」は JWT 認証
+- 公開 API（コンタクト）は認証なし（AllowAny）。管理者用の「永井のLab」と一般ユーザー向け「顧客ポータル」は JWT 認証（別々のログイン画面・トークン）
 
 ### フロントエンド・スタイリング
 
@@ -81,6 +82,7 @@ MuyBienBase/
 ├── myapp-api/django/     # Django バックエンド
 │   ├── contact/          # コンタクトフォーム API
 │   ├── lab/              # 管理者用 Lab API（JWT）
+│   ├── portal/           # 一般ユーザー向け顧客ポータル API（JWT、予約・決済）
 │   └── core/settings/    # 設定（local / production）
 ├── myapp-web/app/        # Vue 3 フロントエンド
 ├── nginx/conf.d/         # Nginx 設定（local / production）
@@ -103,18 +105,21 @@ MuyBienBase/
 | プロフィール | `/profile` | プロフィール |
 | お問い合わせ | `/contact` | コンタクトフォーム |
 | 永井のLab（ログイン） | `/lab/login` | 管理者ログイン（JWT） |
-| 永井のLab | `/lab` | お問い合わせ一覧（要ログイン） |
+| 永井のLab | `/lab` | お問い合わせ一覧・顧客管理・タスク・日記・予約管理・権限管理（要ログイン） |
+| 顧客ポータル（ログイン） | `/portal/login` | 一般ユーザー（顧客）ログイン（JWT） |
+| 顧客ポータル | `/portal/reservations` | 予約管理（打ち合わせ予約の作成・変更・キャンセル） |
+| 顧客ポータル | `/portal/payment` | 決済管理（Stripeでのカード登録・変更・削除） |
 
 ### 永井のLab（管理者ログイン）
 
-公開サイトとは別に、お問い合わせ内容を確認する **管理者 UI** があります。
+公開サイトとは別に、お問い合わせ・顧客・予約などを管理する **管理者 UI** があります。
 
 | 項目 | 内容 |
 |------|------|
-| 認証方式 | JWT（Django スーパーユーザー） |
+| 認証方式 | JWT（Django スーパーユーザー、または権限管理でロールを付与したユーザー） |
 | ログイン画面 | `/lab/login` |
 | ダッシュボード | `/lab`（お問い合わせ一覧） |
-| 用途 | コンタクトフォームの受信内容確認 |
+| 用途 | お問い合わせ確認、顧客管理（Labへの招待）、タスク・日記、予約一覧・営業時間設定、ユーザー・権限管理 |
 
 **初回はスーパーユーザー作成が必要です。**
 
@@ -133,16 +138,44 @@ sudo docker exec -it muybien-api python manage.py createsuperuser
 本番 URL 例: `https://muybien.jp/lab/login`  
 詳細（本番作業）は [PRODUCTION.md](PRODUCTION.md) の「スーパーユーザー / 永井のLab」を参照。
 
+### 顧客ポータル（一般ユーザー向けログイン）
+
+Labとは別の入り口として、顧客自身がログインして使う **顧客ポータル** があります。Lab側のRBAC（メニュー権限）とは独立しており、顧客は予約管理・決済管理のみ利用できます（Labの他メニューにはアクセスできません）。
+
+| 項目 | 内容 |
+|------|------|
+| 認証方式 | JWT（`lab.Customer` に紐づくアカウント。Labと同じ `/v1/api/auth/login` を利用するが、トークンの保存先はLabと別） |
+| ログイン画面 | `/portal/login` |
+| 予約管理 | `/portal/reservations`（営業時間内の空き枠から予約作成・変更・キャンセル） |
+| 決済管理 | `/portal/payment`（Stripe Payment Elementでカード登録・デフォルト設定・削除） |
+| アカウント発行 | Lab「顧客管理」の顧客詳細から **「Labへ招待」** で発行（自己サインアップは無し） |
+
+顧客ポータル用アカウントは、Lab管理者が「顧客管理」で顧客を招待した際に発行される Django ユーザーと同一です（`Customer.user`）。招待メールのリンクからパスワードを設定すれば、そのままLabではなく `/portal/login` からログインします。
+
+営業時間（予約可能な曜日・時間帯）は `/lab/reservations` の「営業時間設定」タブで永井が設定します。決済にはStripeのテスト/本番キーが必要です（`STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY`。詳細は [PRODUCTION.md](PRODUCTION.md)）。
+
 ### API
 
 | Method | Path | 説明 |
 |--------|------|------|
 | POST | `/v1/api/contact` | お問い合わせ送信（DB 保存 + メール通知） |
-| POST | `/v1/api/auth/login` | Lab ログイン（JWT 取得） |
+| POST | `/v1/api/auth/login` | ログイン（JWT 取得、Lab/ポータル共通） |
 | POST | `/v1/api/auth/refresh` | JWT リフレッシュ |
-| GET | `/v1/api/auth/me` | ログイン中ユーザー情報 |
+| GET | `/v1/api/auth/me` | ログイン中ユーザー情報（`is_customer` を含む） |
 | GET | `/v1/api/lab/contacts` | お問い合わせ一覧（要認証） |
 | GET | `/v1/api/lab/contacts/<id>` | お問い合わせ詳細（要認証） |
+| GET/POST | `/v1/api/lab/customers` | 顧客管理 |
+| POST | `/v1/api/lab/customers/<id>/invite` | 顧客をLab/ポータルへ招待 |
+| GET | `/v1/api/lab/reservations` | 予約一覧（管理者、要認証） |
+| PATCH/DELETE | `/v1/api/lab/reservations/<id>` | 予約の編集・キャンセル（管理者） |
+| GET/PUT | `/v1/api/lab/reservation-settings` | 営業時間・予約設定 |
+| GET | `/v1/api/portal/availability` | 空き枠一覧（顧客） |
+| GET/POST | `/v1/api/portal/appointments` | 自分の予約一覧・新規予約（顧客） |
+| PATCH/DELETE | `/v1/api/portal/appointments/<id>` | 予約の変更・キャンセル（顧客） |
+| GET | `/v1/api/portal/payment-methods` | 登録済みカード一覧（顧客） |
+| POST | `/v1/api/portal/payment-methods/setup-intent` | カード登録用SetupIntent発行（顧客） |
+| POST | `/v1/api/portal/payment-methods/<id>/default` | デフォルトカード設定（顧客） |
+| DELETE | `/v1/api/portal/payment-methods/<id>` | カード削除（顧客） |
 
 ※ trailing_slash なし。
 
@@ -169,6 +202,7 @@ make down      # 停止
 |------|-----|
 | フロント | http://localhost:5173 |
 | Lab ログイン | http://localhost:5173/lab/login |
+| 顧客ポータル ログイン | http://localhost:5173/portal/login |
 | API | http://localhost:8000/v1/api/contact |
 | Django Admin | http://localhost:8000/admin/ |
 
@@ -215,4 +249,5 @@ make prod-down              # 本番停止
 | 本番 WSGI | Gunicorn |
 | 本番 Proxy | Nginx |
 | メール（本番） | AWS SES（SMTP） |
+| 決済 | Stripe（SetupIntent + Payment Element、カード情報は自社サーバを経由しない） |
 | インフラ | AWS Lightsail + Docker Compose |

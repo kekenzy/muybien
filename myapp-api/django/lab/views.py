@@ -1,8 +1,15 @@
 from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.utils import timezone
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
+from portal.models import Appointment, AvailabilityRule, ReservationSettings
+from portal.serializers import (
+    AppointmentAdminSerializer,
+    AvailabilityRuleSerializer,
+    ReservationSettingsSerializer,
+)
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -81,6 +88,7 @@ class MeView(APIView):
             'email': user.email,
             'is_staff': user.is_staff,
             'is_superuser': user.is_superuser,
+            'is_customer': hasattr(user, 'customer_profile'),
             'permissions': get_all_menu_levels(user),
         })
 
@@ -160,7 +168,7 @@ class CustomerInviteView(APIView):
         if not customer.email:
             return Response({'detail': 'メールアドレスが未登録のため招待できません。'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if User.objects.filter(username=customer.email).exists():
+        if User.objects.filter(username=customer.email).exists() or User.objects.filter(email=customer.email).exists():
             return Response({'detail': '同じメールアドレスのユーザーが既に存在します。'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = User.objects.create(username=customer.email, email=customer.email, is_active=True)
@@ -262,3 +270,66 @@ class RoleDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         role = serializer.save()
         _sync_role_extras(role, self.request.data)
+
+
+class LabReservationListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'reservations'
+    serializer_class = AppointmentAdminSerializer
+    queryset = Appointment.objects.select_related('customer').all()
+
+
+class LabReservationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """管理者は備考編集・キャンセルのみ行える（日時変更は顧客ポータル側で行う）"""
+
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'reservations'
+    serializer_class = AppointmentAdminSerializer
+    queryset = Appointment.objects.select_related('customer').all()
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
+
+    def perform_update(self, serializer):
+        appointment = serializer.save()
+        if appointment.status == Appointment.STATUS_CANCELLED and not appointment.cancelled_at:
+            appointment.cancelled_at = timezone.now()
+            appointment.save(update_fields=['cancelled_at'])
+
+    def perform_destroy(self, instance):
+        instance.status = Appointment.STATUS_CANCELLED
+        instance.cancelled_at = timezone.now()
+        instance.save(update_fields=['status', 'cancelled_at', 'updated_at'])
+
+
+class LabReservationSettingsView(APIView):
+    """営業時間・予約設定の参照/一括更新"""
+
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'reservations'
+
+    def get(self, request):
+        return Response(self._serialize())
+
+    def put(self, request):
+        settings_obj = ReservationSettings.load()
+        settings_serializer = ReservationSettingsSerializer(
+            settings_obj, data=request.data.get('settings', {}), partial=True,
+        )
+        settings_serializer.is_valid(raise_exception=True)
+        settings_serializer.save()
+
+        AvailabilityRule.objects.all().delete()
+        for rule in request.data.get('rules', []):
+            AvailabilityRule.objects.create(
+                weekday=rule['weekday'],
+                start_time=rule['start_time'],
+                end_time=rule['end_time'],
+                is_active=rule.get('is_active', True),
+            )
+
+        return Response(self._serialize())
+
+    def _serialize(self):
+        return {
+            'settings': ReservationSettingsSerializer(ReservationSettings.load()).data,
+            'rules': AvailabilityRuleSerializer(AvailabilityRule.objects.all(), many=True).data,
+        }

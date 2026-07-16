@@ -45,6 +45,14 @@ down:
 
 restart: down up
 
+# 未使用の Docker リソースをクリア（イメージ・コンテナ・ネットワーク・ビルドキャッシュ）
+# ※ ボリュームは削除しない（DB データ保護）
+docker-reflesh:
+	@echo "未使用の Docker リソースを削除します（ボリュームは対象外）..."
+	$(DOCKER) system prune -af
+	$(DOCKER) builder prune -af
+	@echo "完了"
+
 logs:
 	docker-compose logs -f --tail=200
 

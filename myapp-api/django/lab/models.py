@@ -7,6 +7,7 @@ MENU_CHOICES = [
     ('customers', '顧客管理'),
     ('tasks', 'タスク一覧'),
     ('diary', '日記'),
+    ('reservations', '予約管理'),
     ('users', 'ユーザー管理'),
     ('roles', '権限管理'),
 ]
@@ -110,6 +111,7 @@ class Customer(models.Model):
         on_delete=models.SET_NULL,
         related_name='customer_profile',
     )
+    stripe_customer_id = models.CharField('Stripe顧客ID', max_length=255, blank=True)
     created_at = models.DateTimeField('登録日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 

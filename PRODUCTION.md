@@ -97,6 +97,20 @@ ssh muy 'sudo docker exec muybien-api python manage.py shell -c "from django.con
 |--------|------|-----|
 | `CORS_ALLOWED_ORIGINS` | 許可するフロントオリジン（カンマ区切り） | `https://yourdomain.com,https://www.yourdomain.com` |
 
+### 決済（顧客ポータル・Stripe）
+
+顧客ポータル（`/portal`）のカード登録機能に使用します。未設定でも他機能（Lab・コンタクトフォーム）には影響しません。
+
+| 変数名 | 説明 | 設定場所 |
+|--------|------|----------|
+| `STRIPE_SECRET_KEY` | Stripeシークレットキー（サーバー側） | `.env.prod`（バックエンド） |
+| `STRIPE_PUBLISHABLE_KEY` | Stripe公開可能キー（参考。実際にフロントが使うのは下記） | `.env.prod`（バックエンド） |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe公開可能キー（フロントエンド） | `myapp-web/app/.env` |
+
+> **注意**: `VITE_STRIPE_PUBLISHABLE_KEY` は **Viteのビルド時**に埋め込まれます。`make prod-deploy` はローカルで `npm run build` してからサーバーへ転送するため、**ローカルの `myapp-web/app/.env` にキーを設定してからビルド**する必要があります（`.env.prod` を本番サーバーで編集しても、フロントの公開鍵は反映されません）。
+>
+> 本番運用時はStripeの **本番キー**（`pk_live_...` / `sk_live_...`）に切り替えてください。テスト中は `pk_test_...` / `sk_test_...` を使用します。
+
 ### メール送信（AWS SES）
 
 本番ではコンタクトフォーム通知に **Amazon SES（Simple Email Service）の SMTP エンドポイント** を使用します。
@@ -359,6 +373,8 @@ ssh muy 'sudo docker exec -it muybien-api python manage.py createsuperuser'
 
 認証の概要は [README.md](README.md) の「永井のLab（管理者ログイン）」を参照。
 
+顧客（一般ユーザー）向けの **顧客ポータル**（`/portal`）はLabの「顧客管理」から個別に招待して発行するため、本番でも追加のアカウント作成作業は不要です。詳細は [README.md](README.md) の「顧客ポータル（一般ユーザー向けログイン）」を参照。
+
 ### 4. 環境変数変更後
 
 `.env.prod` を変更したあとは API コンテナを **再作成**（`up -d`）。`restart` では環境変数は更新されません。
@@ -419,6 +435,15 @@ EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=noreply@muybien.jp
 CONTACT_NOTIFY_EMAIL=kenji.nagai@globalway.co.jp
+
+STRIPE_SECRET_KEY=sk_live_（Stripeダッシュボードで発行）
+STRIPE_PUBLISHABLE_KEY=pk_live_（Stripeダッシュボードで発行）
+```
+
+顧客ポータルのフロントエンドをビルドする前に、ローカルの `myapp-web/app/.env` にも同じ公開可能キーを設定すること（Viteはビルド時に埋め込むため）：
+
+```env
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_（Stripeダッシュボードで発行）
 ```
 
 ---

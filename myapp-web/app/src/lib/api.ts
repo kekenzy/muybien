@@ -293,3 +293,59 @@ export async function updateRole(id: number, input: RoleInput): Promise<Role> {
 export async function deleteRole(id: number): Promise<void> {
   await api.delete(`/lab/roles/${id}`)
 }
+
+export type ReservationStatus = 'confirmed' | 'cancelled'
+
+export interface LabReservation {
+  id: number
+  customer: number
+  customer_name: string
+  customer_email: string
+  start_at: string
+  end_at: string
+  status: ReservationStatus
+  note: string
+  created_at: string
+  updated_at: string
+  cancelled_at: string | null
+}
+
+export async function fetchLabReservations(): Promise<LabReservation[]> {
+  const { data } = await api.get<LabReservation[]>('/lab/reservations')
+  return data
+}
+
+export async function cancelLabReservation(id: number): Promise<void> {
+  await api.delete(`/lab/reservations/${id}`)
+}
+
+export interface AvailabilityRule {
+  id: number
+  weekday: number
+  start_time: string
+  end_time: string
+  is_active: boolean
+}
+
+export interface ReservationSettings {
+  slot_minutes: number
+  min_notice_hours: number
+  max_advance_days: number
+}
+
+export interface ReservationSettingsPayload {
+  settings: ReservationSettings
+  rules: AvailabilityRule[]
+}
+
+export async function fetchReservationSettings(): Promise<ReservationSettingsPayload> {
+  const { data } = await api.get<ReservationSettingsPayload>('/lab/reservation-settings')
+  return data
+}
+
+export async function updateReservationSettings(
+  payload: ReservationSettingsPayload,
+): Promise<ReservationSettingsPayload> {
+  const { data } = await api.put<ReservationSettingsPayload>('/lab/reservation-settings', payload)
+  return data
+}

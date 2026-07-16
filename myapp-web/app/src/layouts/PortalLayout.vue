@@ -8,15 +8,15 @@
             type="button"
             class="sm:hidden flex items-center justify-center w-9 h-9 -ml-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             :aria-expanded="menuOpen"
-            aria-controls="lab-mobile-nav"
+            aria-controls="portal-mobile-nav"
             aria-label="メニュー"
             @click="menuOpen = !menuOpen"
           >
             <Menu v-if="!menuOpen" class="w-5 h-5" />
             <X v-else class="w-5 h-5" />
           </button>
-          <router-link to="/lab" class="font-bold text-lg tracking-tight">
-            🔬 永井のLab
+          <router-link to="/portal" class="font-bold text-lg tracking-tight">
+            🗓️ お客様ポータル
           </router-link>
         </div>
         <div v-if="showNav" class="flex items-center gap-4">
@@ -41,7 +41,7 @@
       >
         <nav
           v-if="showNav && menuOpen"
-          id="lab-mobile-nav"
+          id="portal-mobile-nav"
           class="sm:hidden border-t border-white/10 bg-[#080c14] px-4 py-3"
         >
           <div class="flex flex-col gap-1">
@@ -89,35 +89,25 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Menu, X } from 'lucide-vue-next'
-import { isLoggedIn } from '../lib/auth'
-import { logout } from '../lib/api'
-import { canRead, type MenuKey } from '../lib/permissions'
+import { isPortalLoggedIn } from '../lib/portalAuth'
+import { portalLogout } from '../lib/portalApi'
 
 const route = useRoute()
 const router = useRouter()
 const username = ref('')
 const menuOpen = ref(false)
 
-const showNav = computed(
-  () => route.name !== 'lab-login' && route.name !== 'lab-set-password' && isLoggedIn(),
-)
+const showNav = computed(() => route.name !== 'portal-login' && isPortalLoggedIn())
 
-const allNavItems: { name: string; to: string; label: string; menuKey: MenuKey }[] = [
-  { name: 'lab-dashboard', to: '/lab', label: 'お問い合わせ一覧', menuKey: 'contacts' },
-  { name: 'lab-customers', to: '/lab/customers', label: '顧客管理', menuKey: 'customers' },
-  { name: 'lab-tasks', to: '/lab/tasks', label: 'タスク一覧', menuKey: 'tasks' },
-  { name: 'lab-diary', to: '/lab/diary', label: '日記', menuKey: 'diary' },
-  { name: 'lab-reservations', to: '/lab/reservations', label: '予約管理', menuKey: 'reservations' },
-  { name: 'lab-users', to: '/lab/users', label: 'ユーザー管理', menuKey: 'users' },
-  { name: 'lab-roles', to: '/lab/roles', label: '権限管理', menuKey: 'roles' },
+const navItems = [
+  { name: 'portal-reservations', to: '/portal/reservations', label: '予約管理' },
+  { name: 'portal-payment', to: '/portal/payment', label: '決済管理' },
 ]
-
-const navItems = computed(() => allNavItems.filter((item) => canRead(item.menuKey)))
 
 watch(
   () => route.path,
   () => {
-    const stored = sessionStorage.getItem('lab_username')
+    const stored = sessionStorage.getItem('portal_username')
     username.value = stored ?? ''
     menuOpen.value = false
   },
@@ -129,8 +119,8 @@ watch(menuOpen, (open) => {
 })
 
 function handleLogout() {
-  logout()
-  sessionStorage.removeItem('lab_username')
-  router.push('/lab/login')
+  portalLogout()
+  sessionStorage.removeItem('portal_username')
+  router.push('/portal/login')
 }
 </script>

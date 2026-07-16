@@ -80,6 +80,7 @@ Labは「権限管理」画面でロールを作成し、ロールごとに各�
 make up              # コンテナ起動
 make down            # コンテナ停止
 make restart         # コンテナ再起動
+make docker-reflesh  # 未使用の Docker イメージ・ビルドキャッシュを削除（ボリュームは残す）
 make logs            # 全コンテナログ
 make api-logs        # API ログ
 make api-bash        # API コンテナ内シェル
@@ -95,6 +96,7 @@ make build-front     # フロントのプロダクションビルド
 - Lab ログイン: `http://localhost:5173/lab/login`
 - API: `http://localhost:8000/v1/api/contact`
 - Django Admin: `http://localhost:8000/admin/`
+- Mailpit（ローカル送信メール確認）: `http://localhost:8025`
 
 ---
 

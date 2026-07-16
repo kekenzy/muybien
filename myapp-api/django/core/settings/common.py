@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'contact',
     'lab',
+    'portal',
 ]
 
 MIDDLEWARE = [
@@ -96,6 +97,10 @@ CONTACT_NOTIFY_EMAIL = os.environ.get('CONTACT_NOTIFY_EMAIL', 'kenji.nagai@globa
 
 # Lab招待メール内のリンク生成に使うフロントエンドのベースURL
 FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:5173')
+
+# 顧客ポータルの決済（カード登録）用Stripe設定
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 
 LOG_DIR = os.path.join(BASE_DIR, 'log')
 os.makedirs(LOG_DIR, exist_ok=True)
