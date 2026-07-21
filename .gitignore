@@ -12,3 +12,5 @@ myapp-api/django/staticfiles/
 myapp-api/django/media/
 *.sqlite3
 .DS_Store
+._*
+**/._*

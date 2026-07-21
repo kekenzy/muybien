@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-[#080c14] text-white flex flex-col">
     <header class="border-b border-white/10 bg-[#080c14]/90 backdrop-blur sticky top-0 z-50">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 min-w-0">
           <button
             v-if="showNav"
             type="button"
@@ -15,8 +15,13 @@
             <Menu v-if="!menuOpen" class="w-5 h-5" />
             <X v-else class="w-5 h-5" />
           </button>
-          <router-link to="/portal" class="font-bold text-lg tracking-tight">
-            🗓️ お客様ポータル
+          <MuyBienBrandLink />
+          <span class="hidden sm:inline text-white/30" aria-hidden="true">/</span>
+          <router-link
+            to="/portal"
+            class="hidden sm:inline text-sm text-white/70 hover:text-white transition-colors truncate"
+          >
+            お客様ポータル
           </router-link>
         </div>
         <div v-if="showNav" class="flex items-center gap-4">
@@ -89,6 +94,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Menu, X } from 'lucide-vue-next'
+import MuyBienBrandLink from '../components/MuyBienBrandLink.vue'
 import { isPortalLoggedIn } from '../lib/portalAuth'
 import { portalLogout } from '../lib/portalApi'
 
@@ -97,7 +103,7 @@ const router = useRouter()
 const username = ref('')
 const menuOpen = ref(false)
 
-const showNav = computed(() => route.name !== 'portal-login' && isPortalLoggedIn())
+const showNav = computed(() => route.name !== 'portal-login' && route.name !== 'portal-set-password' && isPortalLoggedIn())
 
 const navItems = [
   { name: 'portal-reservations', to: '/portal/reservations', label: '予約管理' },

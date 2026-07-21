@@ -8,13 +8,13 @@
       <div class="relative max-w-4xl mx-auto">
         <span class="text-xs font-semibold tracking-widest text-primary uppercase">Profile</span>
         <h1 class="text-4xl sm:text-5xl md:text-7xl font-black text-white mt-4 mb-6 leading-tight">
-          永井 謙史
+          {{ texts.profile_name || '永井 謙史' }}
         </h1>
-        <p class="text-white/50 text-base sm:text-lg md:text-xl max-w-xl leading-relaxed">
-          AI × Django × AWS で、アイデアを最速でプロダクトに変えるFDE(Forward Deployed Engineer)。ITの力をより身近に。
+        <p class="text-white/50 text-base sm:text-lg md:text-xl max-w-xl leading-relaxed whitespace-pre-line">
+          {{ texts.profile_tagline }}
         </p>
         <a
-          href="https://kenzy-goldentime.blogspot.com/"
+          :href="texts.profile_blog_url || 'https://kenzy-goldentime.blogspot.com/'"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center gap-2 mt-8 text-sm text-white/50 hover:text-white transition-colors"
@@ -29,7 +29,7 @@
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-16">
           <span class="text-xs font-semibold tracking-widest text-primary uppercase">About</span>
-          <h2 class="text-3xl font-bold mt-2 text-gray-900">こんな人です</h2>
+          <h2 class="text-3xl font-bold mt-2 text-gray-900">{{ texts.profile_about_heading || 'こんな人です' }}</h2>
         </div>
 
         <div class="grid md:grid-cols-3 gap-6">
@@ -51,7 +51,7 @@
       <div class="max-w-3xl mx-auto">
         <div class="text-center mb-16">
           <span class="text-xs font-semibold tracking-widest text-primary uppercase">Career</span>
-          <h2 class="text-3xl font-bold mt-2 text-gray-900">キャリア</h2>
+          <h2 class="text-3xl font-bold mt-2 text-gray-900">{{ texts.profile_career_heading || 'キャリア' }}</h2>
         </div>
 
         <div class="relative pl-6 sm:pl-8 border-l-2 border-gray-200 space-y-10 sm:space-y-12">
@@ -77,7 +77,7 @@
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-16">
           <span class="text-xs font-semibold tracking-widest text-primary uppercase">Apps</span>
-          <h2 class="text-3xl font-bold mt-2 text-gray-900">制作アプリ</h2>
+          <h2 class="text-3xl font-bold mt-2 text-gray-900">{{ texts.profile_apps_heading || '制作アプリ' }}</h2>
         </div>
 
         <div class="grid md:grid-cols-2 gap-6">
@@ -134,7 +134,7 @@
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-16">
           <span class="text-xs font-semibold tracking-widest text-primary uppercase">Skills</span>
-          <h2 class="text-3xl font-bold mt-2 text-gray-900">技術スタック</h2>
+          <h2 class="text-3xl font-bold mt-2 text-gray-900">{{ texts.profile_skills_heading || '技術スタック' }}</h2>
         </div>
 
         <div class="space-y-10">
@@ -160,10 +160,10 @@
     <!-- CTA -->
     <section class="py-24 px-6 bg-[#080c14]">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-3xl sm:text-4xl font-black text-white mb-6 leading-tight">
-          一緒に何か<br>つくりませんか？
+        <h2 class="text-3xl sm:text-4xl font-black text-white mb-6 leading-tight whitespace-pre-line">
+          {{ texts.profile_cta_title || '一緒に何か\nつくりませんか？' }}
         </h2>
-        <p class="text-white/40 mb-10">初回相談は無料。気軽にメッセージください。</p>
+        <p class="text-white/40 mb-10">{{ texts.profile_cta_subtitle || '初回相談は無料。気軽にメッセージください。' }}</p>
         <router-link
           to="/contact"
           class="inline-flex items-center gap-2 bg-white text-gray-900 px-8 py-4 rounded-full font-semibold text-sm hover:bg-gray-100 transition-colors"
@@ -176,102 +176,68 @@
 </template>
 
 <script setup lang="ts">
-const values = [
-  {
-    emoji: '🚀',
-    title: '新規立ち上げが好き',
-    desc: '0→1フェーズが特に好き。アイデアをプロダクトに変える瞬間にエネルギーを感じます。',
-  },
-  {
-    emoji: '🤝',
-    title: '顧客主語で動く',
-    desc: 'ユーザーや顧客が何を必要としているかを軸に考える。技術はあくまで手段。',
-  },
-  {
-    emoji: '⚡',
-    title: '効率を極める',
-    desc: 'AI × ツール活用で開発速度を最大化。繰り返し作業を自動化するのが好きです。',
-  },
-]
+import { onMounted, ref } from 'vue'
+import { fetchSiteContent, type ContentItem } from '../lib/api'
 
-const career = [
-  {
-    year: '2000〜2004',
-    company: 'エコーシステムズ',
-    desc: '携帯電話テスターからキャリアをスタート。東京支店開設に伴い上京。Java / C++ を用いた Web・バッチシステム開発を担当。',
-    projects: ['HIS（旅行）', '読売新聞', '松井証券', '携帯電話テスト', 'Java', 'C++'],
-  },
-  {
-    year: '2004〜2021',
-    company: 'キヤノンITソリューションズ（旧キヤノンソフトウェア）',
-    desc: '組み込み・Web・モバイルと幅広い領域で17年間開発に従事。複合機・ロボット・プロジェクタ・ECU計測器など多様なドメインを経験。キャリア中盤で初代 Android を購入したことをきっかけに趣味のゲーム開発も開始。',
-    projects: [
-      'キヤノン複合機制御', 'キヤノン内製ロボット', 'プロジェクタ iOS/Android',
-      'SUBARU ECU計測器', '楽天証券 Web', '京セラ 燃料電池',
-      'KEYENCE Windows アプリ', 'ミネベアミツミ 受発注システム',
-      'C / C++', 'Java', 'C#', 'Swift', 'Android',
-    ],
-  },
-  {
-    year: '2021〜現在',
-    company: 'Globalway — PF事業部ディレクター',
-    desc: 'Python / Django へ転向し Web サービス開発に専念。複数の大手 通信会社系案件を担当しながら、AI 活用・クラウドインフラ・チームマネジメントも推進。ディレクタとして新規顧客開拓を牽引。',
-    projects: [
-      '某大手通信会社 トラフィックレポート', '某大手通信会社マイページ',
-      '個別指導塾',
-      'Python / Django', 'AWS', 'AI活用推進',
-    ],
-  },
-]
+interface ValueItem {
+  emoji: string
+  title: string
+  desc: string
+}
 
-const apps = [
-  {
-    icon: '/images/yomohiro-kan-icon.png',
-    title: '東西南北（よもひろ）館',
-    category: '予約・決済',
-    date: '2023年',
-    desc: '旅館向けオンライン予約・決済システム。Square API 連携でクレジット決済に対応し、SMS通知・キャンセル自動処理・売上レポートを実装。Django + AWS で本番運用中。',
-    screenshot: '/images/yomohiro-kan-screenshot.png',
-    tags: ['Django', 'Square API', 'AWS Lightsail', 'PostgreSQL', 'SMS通知'],
-    url: 'https://yomohirokan.com/',
-  },
-  {
-    icon: '/images/monster-sweeper-icon.png',
-    title: 'モンスタースイーパー',
-    category: 'パズルゲーム',
-    date: '2016年3月',
-    desc: '罠をしかけてモンスターを倒す、新感覚マインスイーパーRPG。ダジャモン（ダジャレモンスター）を探し出して図鑑コンプリートを目指す。STELLA STUDIO として個人開発・リリース。',
-    screenshot: '/images/monster-sweeper-screenshot.png',
-    tags: ['Android', 'マインスイーパー', 'RPG', '個人開発'],
-    url: 'https://appget.com/appli/view/62986/',
-  },
-]
+interface CareerItem {
+  year: string
+  company: string
+  desc: string
+  projects: string[]
+}
 
-const skillGroups = [
-  {
-    label: 'Backend',
-    primary: true,
-    items: ['Python', 'Django', 'Django REST Framework', 'PostgreSQL', 'Square API'],
-  },
-  {
-    label: 'Frontend',
-    primary: true,
-    items: ['Vue 3', 'TypeScript', 'Tailwind CSS', 'Vite'],
-  },
-  {
-    label: 'Cloud / Infra',
-    primary: false,
-    items: ['AWS Lightsail', 'AWS SES', 'AWS S3', 'Docker', 'Nginx', 'Linux'],
-  },
-  {
-    label: 'AI',
-    primary: false,
-    items: ['Claude API', 'GPT-4', 'RAG', 'プロンプト設計', 'Cursor IDE', 'AI駆動開発'],
-  },
-  {
-    label: 'Past Experience',
-    primary: false,
-    items: ['Java', 'C', 'C++', 'C#', 'Swift', 'Android', 'iOS', 'Raspberry Pi', 'Chart.js'],
-  },
-]
+interface AppItem {
+  category: string
+  date: string
+  title: string
+  desc: string
+  emoji?: string
+  tags: string[]
+  url?: string
+  icon?: string
+  screenshot?: string
+}
+
+interface SkillGroup {
+  label: string
+  primary: boolean
+  items: string[]
+}
+
+const texts = ref<Record<string, string>>({})
+const values = ref<ValueItem[]>([])
+const career = ref<CareerItem[]>([])
+const apps = ref<AppItem[]>([])
+const skillGroups = ref<SkillGroup[]>([])
+
+// 画像はLabからアップロードされたものを優先し、無ければ導入時の初期データ（data.icon_url等）を使う
+function toApp(item: ContentItem): AppItem {
+  const data = item.data as any
+  return {
+    ...data,
+    icon: item.image || data.icon_url,
+    screenshot: item.image_secondary || data.screenshot_url,
+  }
+}
+
+async function load() {
+  try {
+    const content = await fetchSiteContent()
+    texts.value = content.texts
+    values.value = (content.items.profile_values ?? []).map((i) => i.data as unknown as ValueItem)
+    career.value = (content.items.profile_career ?? []).map((i) => i.data as unknown as CareerItem)
+    apps.value = (content.items.profile_apps ?? []).map(toApp)
+    skillGroups.value = (content.items.profile_skills ?? []).map((i) => i.data as unknown as SkillGroup)
+  } catch {
+    // 取得失敗時は空表示のまま
+  }
+}
+
+onMounted(load)
 </script>

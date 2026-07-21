@@ -10,19 +10,18 @@
       <div class="relative max-w-5xl mx-auto px-4 sm:px-6 py-24 sm:py-32 w-full">
         <div class="inline-flex items-center gap-2 border border-white/10 bg-white/5 text-white/60 text-xs px-4 py-2 rounded-full mb-8 sm:mb-10 backdrop-blur">
           <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-          フリーランス受付中
+          {{ texts.home_hero_badge || 'フリーランス受付中' }}
         </div>
 
         <h1 class="text-4xl sm:text-5xl md:text-8xl font-black text-white leading-[1.05] tracking-tight mb-6 sm:mb-8">
-          Build Faster.<br>
+          {{ texts.home_hero_title_line1 || 'Build Faster.' }}<br>
           <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-            Ship Smarter.
+            {{ texts.home_hero_title_line2 || 'Ship Smarter.' }}
           </span>
         </h1>
 
-        <p class="text-white/50 text-base sm:text-lg md:text-xl max-w-xl mb-10 sm:mb-12 leading-relaxed">
-          AI × Django × AWS で、あなたのプロダクトを<br class="hidden sm:block">
-          最速で動かすエンジニア。
+        <p class="text-white/50 text-base sm:text-lg md:text-xl max-w-xl mb-10 sm:mb-12 leading-relaxed whitespace-pre-line">
+          {{ texts.home_hero_subtitle || 'AI × Django × AWS で、あなたのプロダクトを最速で動かすエンジニア。' }}
         </p>
 
         <div class="flex flex-wrap gap-4">
@@ -51,12 +50,39 @@
       </div>
     </section>
 
+    <!-- お知らせ -->
+    <section v-if="announcements.length > 0" class="py-24 px-6 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-16">
+          <span class="text-xs font-semibold tracking-widest text-primary uppercase">News</span>
+          <h2 class="text-3xl font-bold mt-2 text-gray-900">お知らせ</h2>
+        </div>
+        <div class="grid md:grid-cols-3 gap-6">
+          <router-link
+            v-for="item in announcements"
+            :key="item.id"
+            :to="`/news/${item.id}`"
+            class="block p-6 rounded-2xl border border-gray-100 bg-white hover:border-primary/30 hover:shadow-md transition-all"
+          >
+            <img
+              v-if="item.cover_image"
+              :src="item.cover_image"
+              :alt="item.title"
+              class="w-full h-32 object-cover rounded-xl mb-4"
+            />
+            <div class="text-xs text-gray-400 mb-1">{{ formatDate(item.published_at) }}</div>
+            <h3 class="font-semibold text-gray-900 leading-snug">{{ item.title }}</h3>
+          </router-link>
+        </div>
+      </div>
+    </section>
+
     <!-- Tech Stack -->
     <section class="py-24 px-6 bg-white">
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-16">
           <span class="text-xs font-semibold tracking-widest text-primary uppercase">Stack</span>
-          <h2 class="text-3xl font-bold mt-2 text-gray-900">使いこなす技術</h2>
+          <h2 class="text-3xl font-bold mt-2 text-gray-900">{{ texts.home_stack_heading || '使いこなす技術' }}</h2>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div
@@ -64,7 +90,7 @@
             :key="skill.title"
             class="group p-6 rounded-2xl border border-gray-100 hover:border-primary/30 hover:shadow-lg transition-all cursor-default"
           >
-            <component :is="skill.icon" class="w-7 h-7 text-primary mb-4" />
+            <component :is="iconFor(skill.icon)" class="w-7 h-7 text-primary mb-4" />
             <div class="font-semibold text-gray-900 mb-1">{{ skill.title }}</div>
             <div class="text-xs text-gray-400 leading-relaxed">{{ skill.desc }}</div>
           </div>
@@ -75,10 +101,10 @@
     <!-- CTA -->
     <section class="py-24 px-6 bg-[#080c14]">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6 leading-tight">
-          一緒に、速く<br>つくりましょう。
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-6 leading-tight whitespace-pre-line">
+          {{ texts.home_cta_title || '一緒に、速く\nつくりましょう。' }}
         </h2>
-        <p class="text-white/40 mb-10">初回相談は無料。まずは気軽に話しかけてください。</p>
+        <p class="text-white/40 mb-10">{{ texts.home_cta_subtitle || '初回相談は無料。まずは気軽に話しかけてください。' }}</p>
         <router-link
           to="/contact"
           class="inline-flex items-center gap-2 bg-white text-gray-900 px-8 py-4 rounded-full font-semibold text-sm hover:bg-gray-100 transition-colors"
@@ -91,21 +117,40 @@
 </template>
 
 <script setup lang="ts">
-import { Bot, Server, Layers, Zap, Database, Cloud } from 'lucide-vue-next'
-import { ArrowRight } from 'lucide-vue-next'
+import { onMounted, ref } from 'vue'
+import { ArrowRight, Bot, Server, Layers, Zap, Database, Cloud } from 'lucide-vue-next'
+import { fetchPublicAnnouncements, fetchSiteContent, type Announcement } from '../lib/api'
 
-const stats = [
-  { value: '3×', label: '平均開発スピード向上' },
-  { value: '10+', label: '納品プロジェクト' },
-  { value: '48h', label: '最速納期' },
-]
+const ICONS: Record<string, any> = { Bot, Server, Layers, Zap, Database, Cloud }
+function iconFor(name: string) {
+  return ICONS[name] ?? Bot
+}
 
-const skills = [
-  { icon: Bot, title: 'Claude / GPT-4', desc: 'プロンプト設計・RAG・自動化' },
-  { icon: Server, title: 'Django REST', desc: 'API設計・認証・パフォーマンス' },
-  { icon: Layers, title: 'Vue3 + Tailwind', desc: 'SPA・TypeScript・shadcn-vue' },
-  { icon: Cloud, title: 'AWS Lightsail', desc: 'デプロイ・Nginx・SSL・SES' },
-  { icon: Database, title: 'PostgreSQL', desc: 'スキーマ設計・最適化' },
-  { icon: Zap, title: 'Cursor IDE', desc: 'AI駆動開発で爆速実装' },
-]
+const texts = ref<Record<string, string>>({})
+const stats = ref<{ value: string; label: string }[]>([])
+const skills = ref<{ icon: string; title: string; desc: string }[]>([])
+const announcements = ref<Announcement[]>([])
+
+function formatDate(iso: string | null): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+async function load() {
+  try {
+    const content = await fetchSiteContent()
+    texts.value = content.texts
+    stats.value = (content.items.home_stats ?? []).map((i) => i.data as any)
+    skills.value = (content.items.home_skills ?? []).map((i) => i.data as any)
+  } catch {
+    // 取得失敗時はデフォルト文言のまま表示する
+  }
+  try {
+    announcements.value = await fetchPublicAnnouncements(3)
+  } catch {
+    announcements.value = []
+  }
+}
+
+onMounted(load)
 </script>

@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .invitations import send_invite_email
+from .invitations import resend_invite_email, send_invite_email
 from .models import Customer, DiaryEntry, LabTask, Role, RoleMenuPermission, UserProfile
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
@@ -75,6 +75,13 @@ class LabTokenObtainPairView(TokenObtainPairView):
         if not user.check_password(password):
             return Response({'detail': 'ユーザー名またはパスワードが正しくありません。'}, status=status.HTTP_401_UNAUTHORIZED)
 
+        # 顧客専用アカウントは Lab ではなくポータルへ
+        if hasattr(user, 'customer_profile') and not user.is_staff and not user.is_superuser:
+            return Response(
+                {'detail': 'お客様は顧客ポータル（/portal/login）からログインしてください。'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         return super().post(request, *args, **kwargs)
 
 
@@ -118,7 +125,10 @@ class SetPasswordView(APIView):
         user.set_password(password)
         user.is_active = True
         user.save()
-        return Response({'detail': 'パスワードを設定しました。'})
+        return Response({
+            'detail': 'パスワードを設定しました。',
+            'is_customer': hasattr(user, 'customer_profile'),
+        })
 
 
 class ContactListView(generics.ListAPIView):
@@ -151,7 +161,7 @@ class CustomerDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class CustomerInviteView(APIView):
-    """顧客情報からLabログインアカウントを発行し、招待メールを送信する"""
+    """顧客情報からポータル用ログインアカウントを発行し、招待メールを送信する"""
 
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'customers'
@@ -162,11 +172,17 @@ class CustomerInviteView(APIView):
         except Customer.DoesNotExist:
             return Response({'detail': '顧客が見つかりません。'}, status=status.HTTP_404_NOT_FOUND)
 
-        if customer.user_id:
-            return Response({'detail': 'すでにLabアカウントが発行されています。'}, status=status.HTTP_400_BAD_REQUEST)
-
         if not customer.email:
             return Response({'detail': 'メールアドレスが未登録のため招待できません。'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 既存アカウントなら招待メールを再送（パスワード未設定・リンク切れの救済）
+        if customer.user_id:
+            resend_invite_email(
+                customer.user,
+                intro=f'{customer.name} 様\n\nお客様ポータルのパスワード設定リンクを再送します。',
+                portal=True,
+            )
+            return Response(CustomerSerializer(customer).data)
 
         if User.objects.filter(username=customer.email).exists() or User.objects.filter(email=customer.email).exists():
             return Response({'detail': '同じメールアドレスのユーザーが既に存在します。'}, status=status.HTTP_400_BAD_REQUEST)
@@ -178,7 +194,11 @@ class CustomerInviteView(APIView):
         customer.user = user
         customer.save(update_fields=['user'])
 
-        send_invite_email(user, intro=f'{customer.name} 様\n\n永井のLabへのログインアカウントが作成されました。')
+        send_invite_email(
+            user,
+            intro=f'{customer.name} 様\n\nお客様ポータルへのログインアカウントが作成されました。',
+            portal=True,
+        )
 
         return Response(CustomerSerializer(customer).data)
 
@@ -248,6 +268,25 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
         if instance.is_superuser:
             raise ValidationError('スーパーユーザーは削除できません。')
         instance.delete()
+
+
+class UserInviteView(APIView):
+    """招待メール再送（リンク期限切れ・未設定パスワードの救済）"""
+
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'users'
+
+    def post(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'detail': 'ユーザーが見つかりません。'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not user.email:
+            return Response({'detail': 'メールアドレスが未登録のため招待できません。'}, status=status.HTTP_400_BAD_REQUEST)
+
+        resend_invite_email(user)
+        return Response(UserAdminSerializer(user).data)
 
 
 class RoleListCreateView(generics.ListCreateAPIView):

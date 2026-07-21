@@ -136,6 +136,18 @@
           </div>
         </div>
 
+        <div v-if="editingUser && canWrite('users')" class="flex items-center gap-2">
+          <button
+            type="button"
+            class="text-xs px-3 py-1 rounded-full border border-primary/40 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+            :disabled="inviting || !form.email"
+            @click="resendInvite(editingUser)"
+          >
+            {{ inviting ? '送信中...' : '招待メール再送' }}
+          </button>
+          <span class="text-xs text-white/50">リンク期限切れ時などに再送できます</span>
+        </div>
+
         <div class="flex items-center justify-between pt-2">
           <button
             v-if="editingUser && canWrite('users') && !editingUser.is_superuser"
@@ -177,6 +189,7 @@ import {
   deleteUser,
   fetchRoles,
   fetchUsers,
+  inviteUser,
   updateUser,
   type LabUser,
   type LabUserInput,
@@ -188,6 +201,7 @@ const users = ref<LabUser[]>([])
 const roles = ref<Role[]>([])
 const loading = ref(true)
 const saving = ref(false)
+const inviting = ref(false)
 const errorMsg = ref('')
 const showForm = ref(false)
 const editingUser = ref<LabUser | null>(null)
@@ -298,6 +312,19 @@ async function removeUser(user: LabUser) {
     closeForm()
   } catch {
     errorMsg.value = '削除に失敗しました。'
+  }
+}
+
+async function resendInvite(user: LabUser) {
+  inviting.value = true
+  errorMsg.value = ''
+  try {
+    await inviteUser(user.id)
+    alert('招待メールを再送しました。')
+  } catch {
+    errorMsg.value = '招待メールの再送に失敗しました。'
+  } finally {
+    inviting.value = false
   }
 }
 

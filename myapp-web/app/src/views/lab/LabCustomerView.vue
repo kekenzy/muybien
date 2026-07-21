@@ -48,7 +48,7 @@
                 会社名{{ sortIndicator('company') }}
               </th>
               <th class="px-4 py-3 text-left font-medium">由来</th>
-              <th class="px-4 py-3 text-left font-medium">Labログイン</th>
+              <th class="px-4 py-3 text-left font-medium">ポータル</th>
               <th class="px-4 py-3 text-left font-medium cursor-pointer select-none" @click="sortBy('created_at')">
                 登録日時{{ sortIndicator('created_at') }}
               </th>
@@ -180,7 +180,7 @@
           />
         </div>
 
-        <div v-if="editingCustomer" class="flex items-center gap-2">
+        <div v-if="editingCustomer && canWrite('customers')" class="flex items-center gap-2">
           <button
             v-if="!editingCustomer.has_login"
             type="button"
@@ -188,14 +188,27 @@
             :disabled="inviting || !editingCustomer.email"
             @click="inviteToLab(editingCustomer)"
           >
-            {{ inviting ? '招待中...' : '+ Labへ招待' }}
+            {{ inviting ? '招待中...' : '+ ポータルへ招待' }}
           </button>
-          <span
-            v-else
-            class="text-xs px-3 py-1 rounded-full border border-green-500/40 text-green-400 bg-green-500/10"
-          >
-            Labログイン招待済み
-          </span>
+          <template v-else>
+            <span class="text-xs px-3 py-1 rounded-full border border-green-500/40 text-green-400 bg-green-500/10">
+              ポータル招待済み
+            </span>
+            <button
+              type="button"
+              class="text-xs px-3 py-1 rounded-full border border-white/20 text-white/70 hover:bg-white/10 transition-colors disabled:opacity-50"
+              :disabled="inviting || !editingCustomer.email"
+              @click="inviteToLab(editingCustomer)"
+            >
+              {{ inviting ? '送信中...' : '招待メール再送' }}
+            </button>
+          </template>
+        </div>
+        <div
+          v-else-if="editingCustomer?.has_login"
+          class="text-xs px-3 py-1 rounded-full border border-green-500/40 text-green-400 bg-green-500/10 inline-block"
+        >
+          ポータル招待済み
         </div>
 
         <div class="flex items-center justify-between pt-2">
@@ -404,12 +417,14 @@ async function inviteToLab(customer: Customer) {
   inviting.value = true
   errorMsg.value = ''
   try {
+    const wasInvited = customer.has_login
     const updated = await inviteCustomer(customer.id)
     const idx = customers.value.findIndex((c) => c.id === updated.id)
     if (idx !== -1) customers.value[idx] = updated
     editingCustomer.value = updated
+    alert(wasInvited ? '招待メールを再送しました。' : '招待メールを送信しました。')
   } catch {
-    errorMsg.value = 'Labへの招待に失敗しました。'
+    errorMsg.value = 'ポータルへの招待に失敗しました。'
   } finally {
     inviting.value = false
   }

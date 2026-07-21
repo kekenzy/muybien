@@ -1,0 +1,13 @@
+# macOS AppleDouble / Finder metadata (breaks Docker xattr on external volumes)
+._*
+**/._*
+.DS_Store
+**/.DS_Store
+
+# Local runtime / secrets
+django/.env
+django/log
+django/staticfiles
+django/media
+**/__pycache__
+**/*.pyc

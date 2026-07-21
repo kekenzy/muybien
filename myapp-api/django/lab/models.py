@@ -10,6 +10,8 @@ MENU_CHOICES = [
     ('reservations', '予約管理'),
     ('users', 'ユーザー管理'),
     ('roles', '権限管理'),
+    ('announcements', 'お知らせ管理'),
+    ('site_content', 'サイトコンテンツ管理'),
 ]
 
 

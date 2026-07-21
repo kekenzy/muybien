@@ -12,6 +12,8 @@ const LAB_MENU_ROUTES: { menuKey: MenuKey; path: string }[] = [
   { menuKey: 'reservations', path: '/lab/reservations' },
   { menuKey: 'users', path: '/lab/users' },
   { menuKey: 'roles', path: '/lab/roles' },
+  { menuKey: 'announcements', path: '/lab/announcements' },
+  { menuKey: 'site_content', path: '/lab/content' },
 ]
 
 const router = createRouter({
@@ -22,6 +24,7 @@ const router = createRouter({
     { path: '/portfolio', component: () => import('../views/PortfolioView.vue') },
     { path: '/profile', component: () => import('../views/ProfileView.vue') },
     { path: '/contact', component: () => import('../views/ContactView.vue') },
+    { path: '/news/:id', component: () => import('../views/AnnouncementDetailView.vue') },
     {
       path: '/lab',
       component: () => import('../layouts/LabLayout.vue'),
@@ -79,6 +82,18 @@ const router = createRouter({
           component: () => import('../views/lab/LabRoleView.vue'),
           meta: { requiresAuth: true, menuKey: 'roles' },
         },
+        {
+          path: 'announcements',
+          name: 'lab-announcements',
+          component: () => import('../views/lab/LabAnnouncementView.vue'),
+          meta: { requiresAuth: true, menuKey: 'announcements' },
+        },
+        {
+          path: 'content',
+          name: 'lab-content',
+          component: () => import('../views/lab/LabContentView.vue'),
+          meta: { requiresAuth: true, menuKey: 'site_content' },
+        },
       ],
     },
     {
@@ -90,6 +105,11 @@ const router = createRouter({
           name: 'portal-login',
           component: () => import('../views/portal/PortalLoginView.vue'),
           meta: { portalGuestOnly: true },
+        },
+        {
+          path: 'set-password',
+          name: 'portal-set-password',
+          component: () => import('../views/portal/PortalSetPasswordView.vue'),
         },
         {
           path: '',

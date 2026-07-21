@@ -3,7 +3,7 @@
     <div class="max-w-4xl mx-auto">
       <div class="text-center mb-16">
         <span class="text-xs font-semibold tracking-widest text-primary uppercase">Services</span>
-        <h1 class="text-3xl font-bold mt-2">提供サービス</h1>
+        <h1 class="text-3xl font-bold mt-2">{{ heading }}</h1>
       </div>
 
       <div class="grid md:grid-cols-3 gap-6">
@@ -38,39 +38,28 @@
 </template>
 
 <script setup lang="ts">
-const services = [
-  {
-    category: 'Web開発相談',
-    title: 'Web開発相談',
-    price: 10000,
-    includes: [
-      'オンライン30分 × 1回',
-      'アーキテクチャレビュー',
-      'デプロイ・インフラ相談',
-      'コードレビュー対応',
-    ],
-  },
-  {
-    category: 'AI活用',
-    title: 'AIプロンプト設計パッケージ',
-    price: 10000,
-    includes: [
-      'ユースケースヒアリング（60分）',
-      'プロンプトテンプレート作成',
-      'Claude / GPT-4 対応',
-      '1週間サポート付き',
-    ],
-  },
-  {
-    category: 'レッスン',
-    title: 'Claude / Cursor 活用レッスン',
-    price: 15000,
-    includes: [
-      'オンライン60分 × 1回',
-      '開発フロー効率化の実演',
-      'カスタム設定のレビュー',
-      'アーカイブ動画提供',
-    ],
-  },
-]
+import { onMounted, ref } from 'vue'
+import { fetchSiteContent } from '../lib/api'
+
+interface Service {
+  category: string
+  title: string
+  price: number
+  includes: string[]
+}
+
+const heading = ref('提供サービス')
+const services = ref<Service[]>([])
+
+async function load() {
+  try {
+    const content = await fetchSiteContent()
+    heading.value = content.texts.services_heading || heading.value
+    services.value = (content.items.services ?? []).map((i) => i.data as unknown as Service)
+  } catch {
+    // 取得失敗時は空表示のまま
+  }
+}
+
+onMounted(load)
 </script>

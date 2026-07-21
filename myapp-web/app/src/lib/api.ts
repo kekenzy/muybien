@@ -65,6 +65,7 @@ export interface MeResponse {
   email: string
   is_staff: boolean
   is_superuser: boolean
+  is_customer: boolean
   permissions: Record<string, number>
 }
 
@@ -94,8 +95,17 @@ export function logout(): void {
   clearPermissions()
 }
 
-export async function setPassword(uid: string, token: string, password: string): Promise<void> {
-  await api.post('/lab/set-password', { uid, token, password })
+export async function setPassword(
+  uid: string,
+  token: string,
+  password: string,
+): Promise<{ detail: string; is_customer: boolean }> {
+  // 未認証エンドポイント。ローカルに残った JWT を付けない（無効トークンだと AllowAny でも 401 になる）
+  const { data } = await axios.post<{ detail: string; is_customer: boolean }>(
+    '/v1/api/lab/set-password',
+    { uid, token, password },
+  )
+  return data
 }
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
@@ -255,6 +265,11 @@ export async function deleteUser(id: number): Promise<void> {
   await api.delete(`/lab/users/${id}`)
 }
 
+export async function inviteUser(id: number): Promise<LabUser> {
+  const { data } = await api.post<LabUser>(`/lab/users/${id}/invite`)
+  return data
+}
+
 export interface RoleMenuPermissionItem {
   menu_key: string
   level: number
@@ -347,5 +362,160 @@ export async function updateReservationSettings(
   payload: ReservationSettingsPayload,
 ): Promise<ReservationSettingsPayload> {
   const { data } = await api.put<ReservationSettingsPayload>('/lab/reservation-settings', payload)
+  return data
+}
+
+function toFormData(input: Record<string, unknown>): FormData {
+  const formData = new FormData()
+  Object.entries(input).forEach(([key, value]) => {
+    if (value === undefined || value === null) return
+    if (value instanceof File) {
+      formData.append(key, value)
+    } else if (typeof value === 'boolean') {
+      formData.append(key, value ? 'true' : 'false')
+    } else if (typeof value === 'object') {
+      formData.append(key, JSON.stringify(value))
+    } else {
+      formData.append(key, String(value))
+    }
+  })
+  return formData
+}
+
+export interface Announcement {
+  id: number
+  title: string
+  body: string
+  cover_image: string | null
+  is_published: boolean
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AnnouncementInput {
+  title: string
+  body: string
+  is_published: boolean
+  published_at: string | null
+  cover_image?: File | null
+}
+
+export async function fetchAnnouncements(): Promise<Announcement[]> {
+  const { data } = await api.get<Announcement[]>('/lab/announcements')
+  return data
+}
+
+export async function createAnnouncement(input: AnnouncementInput): Promise<Announcement> {
+  const { data } = await api.post<Announcement>('/lab/announcements', toFormData(input))
+  return data
+}
+
+export async function updateAnnouncement(id: number, input: AnnouncementInput): Promise<Announcement> {
+  const { data } = await api.patch<Announcement>(`/lab/announcements/${id}`, toFormData(input))
+  return data
+}
+
+export async function deleteAnnouncement(id: number): Promise<void> {
+  await api.delete(`/lab/announcements/${id}`)
+}
+
+export interface SiteText {
+  id: number
+  key: string
+  value: string
+  updated_at: string
+}
+
+export async function fetchSiteTexts(): Promise<SiteText[]> {
+  const { data } = await api.get<SiteText[]>('/lab/site-texts')
+  return data
+}
+
+export async function updateSiteText(key: string, value: string): Promise<SiteText> {
+  const { data } = await api.patch<SiteText>(`/lab/site-texts/${encodeURIComponent(key)}`, { value })
+  return data
+}
+
+export type ContentSection =
+  | 'home_stats'
+  | 'home_skills'
+  | 'services'
+  | 'portfolio'
+  | 'profile_values'
+  | 'profile_career'
+  | 'profile_apps'
+  | 'profile_skills'
+
+export const CONTENT_SECTION_OPTIONS: { key: ContentSection; label: string }[] = [
+  { key: 'home_stats', label: 'ホーム: 実績数値' },
+  { key: 'home_skills', label: 'ホーム: 技術スタック' },
+  { key: 'services', label: 'サービス一覧' },
+  { key: 'portfolio', label: '実績・ポートフォリオ' },
+  { key: 'profile_values', label: 'プロフィール: こんな人です' },
+  { key: 'profile_career', label: 'プロフィール: キャリア' },
+  { key: 'profile_apps', label: 'プロフィール: 制作アプリ' },
+  { key: 'profile_skills', label: 'プロフィール: 技術スタック' },
+]
+
+export interface ContentItem {
+  id: number
+  section: ContentSection
+  order: number
+  is_active: boolean
+  image: string | null
+  image_secondary: string | null
+  data: Record<string, any>
+  created_at: string
+  updated_at: string
+}
+
+export interface ContentItemInput {
+  section: ContentSection
+  order: number
+  is_active: boolean
+  data: Record<string, any>
+  image?: File | null
+  image_secondary?: File | null
+}
+
+export async function fetchContentItems(section: ContentSection): Promise<ContentItem[]> {
+  const { data } = await api.get<ContentItem[]>('/lab/content-items', { params: { section } })
+  return data
+}
+
+export async function createContentItem(input: ContentItemInput): Promise<ContentItem> {
+  const { data } = await api.post<ContentItem>('/lab/content-items', toFormData(input))
+  return data
+}
+
+export async function updateContentItem(id: number, input: ContentItemInput): Promise<ContentItem> {
+  const { data } = await api.patch<ContentItem>(`/lab/content-items/${id}`, toFormData(input))
+  return data
+}
+
+export async function deleteContentItem(id: number): Promise<void> {
+  await api.delete(`/lab/content-items/${id}`)
+}
+
+// --- 公開サイト用（認証不要） ---
+
+export async function fetchPublicAnnouncements(limit?: number): Promise<Announcement[]> {
+  const { data } = await api.get<Announcement[]>('/announcements', { params: limit ? { limit } : undefined })
+  return data
+}
+
+export async function fetchPublicAnnouncement(id: number): Promise<Announcement> {
+  const { data } = await api.get<Announcement>(`/announcements/${id}`)
+  return data
+}
+
+export interface SiteContentResponse {
+  texts: Record<string, string>
+  items: Partial<Record<ContentSection, ContentItem[]>>
+}
+
+export async function fetchSiteContent(): Promise<SiteContentResponse> {
+  const { data } = await api.get<SiteContentResponse>('/site-content')
   return data
 }

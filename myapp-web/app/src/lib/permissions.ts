@@ -1,6 +1,15 @@
 import { reactive } from 'vue'
 
-export type MenuKey = 'contacts' | 'customers' | 'tasks' | 'diary' | 'reservations' | 'users' | 'roles'
+export type MenuKey =
+  | 'contacts'
+  | 'customers'
+  | 'tasks'
+  | 'diary'
+  | 'reservations'
+  | 'users'
+  | 'roles'
+  | 'announcements'
+  | 'site_content'
 
 export const MENU_OPTIONS: { key: MenuKey; label: string }[] = [
   { key: 'contacts', label: 'お問い合わせ一覧' },
@@ -10,6 +19,8 @@ export const MENU_OPTIONS: { key: MenuKey; label: string }[] = [
   { key: 'reservations', label: '予約管理' },
   { key: 'users', label: 'ユーザー管理' },
   { key: 'roles', label: '権限管理' },
+  { key: 'announcements', label: 'お知らせ管理' },
+  { key: 'site_content', label: 'サイトコンテンツ管理' },
 ]
 
 export const LEVEL_NONE = 0

@@ -51,7 +51,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { fetchMe, login } from '../../lib/api'
+import { fetchMe, login, logout } from '../../lib/api'
 import { setPermissions } from '../../lib/permissions'
 
 const router = useRouter()
@@ -66,11 +66,20 @@ async function submit() {
   try {
     await login(username.value, password.value)
     const me = await fetchMe()
+    if (me.is_customer && !me.is_staff && !me.is_superuser) {
+      logout()
+      errorMsg.value = 'お客様は顧客ポータルからログインしてください。'
+      return
+    }
     sessionStorage.setItem('lab_username', me.username)
     setPermissions(me.is_superuser, me.is_staff, me.permissions)
     router.push('/lab')
-  } catch {
-    errorMsg.value = 'ログインに失敗しました。ユーザー名とパスワードを確認してください。'
+  } catch (e: unknown) {
+    const detail =
+      e && typeof e === 'object' && 'response' in e
+        ? (e as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+    errorMsg.value = detail || 'ログインに失敗しました。ユーザー名とパスワードを確認してください。'
   } finally {
     loading.value = false
   }

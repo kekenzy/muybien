@@ -20,6 +20,7 @@ from .views import (
     TaskDetailView,
     TaskListCreateView,
     UserDetailView,
+    UserInviteView,
     UserListCreateView,
 )
 
@@ -42,6 +43,7 @@ urlpatterns = [
     path('lab/reservation-settings', LabReservationSettingsView.as_view()),
     path('lab/users', UserListCreateView.as_view()),
     path('lab/users/<int:pk>', UserDetailView.as_view()),
+    path('lab/users/<int:pk>/invite', UserInviteView.as_view()),
     path('lab/roles', RoleListCreateView.as_view()),
     path('lab/roles/<int:pk>', RoleDetailView.as_view()),
 ]

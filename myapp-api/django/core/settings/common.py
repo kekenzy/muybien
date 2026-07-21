@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta, timezone
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 DEBUG = False
 ALLOWED_HOSTS = ['*']
@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     'contact',
     'lab',
     'portal',
+    'content',
 ]
 
 MIDDLEWARE = [

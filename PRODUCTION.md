@@ -91,11 +91,12 @@ ssh muy 'sudo docker exec muybien-api python manage.py shell -c "from django.con
 | `POSTGRES_USER` | Docker DB コンテナ用ユーザー | `RDS_USERNAME` と同じ値 |
 | `POSTGRES_PASSWORD` | Docker DB コンテナ用パスワード | `RDS_PASSWORD` と同じ値 |
 
-### CORS
+### CORS / フロント URL
 
 | 変数名 | 説明 | 例 |
 |--------|------|-----|
 | `CORS_ALLOWED_ORIGINS` | 許可するフロントオリジン（カンマ区切り） | `https://yourdomain.com,https://www.yourdomain.com` |
+| `FRONTEND_BASE_URL` | 招待メール等に載せるフロントの公開 URL（**必須**。未設定だと `http://localhost:5173`） | `https://yourdomain.com` |
 
 ### 決済（顧客ポータル・Stripe）
 

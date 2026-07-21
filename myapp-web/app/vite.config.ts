@@ -13,6 +13,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/v1/api': { target: 'http://myapp-api:8000', changeOrigin: true },
+      '/media': { target: 'http://myapp-api:8000', changeOrigin: true },
     },
   },
 })

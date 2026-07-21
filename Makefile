@@ -4,17 +4,29 @@ WEB_CONTAINER=muybien-web
 # docker グループ未所属時は sudo（本番サーバー等）
 DOCKER := $(shell docker info >/dev/null 2>&1 && echo docker || echo sudo docker)
 
+.PHONY: local-urls
+
 # ─────────────────────────────────────────
 # ローカル開発
 # ─────────────────────────────────────────
+local-urls:
+	@echo ""
+	@echo "ローカル URL:"
+	@echo "  フロント           http://localhost:5173"
+	@echo "  Lab ログイン       http://localhost:5173/lab/login"
+	@echo "  顧客ポータル       http://localhost:5173/portal/login"
+	@echo "  API                http://localhost:8000/v1/api/contact"
+	@echo "  Django Admin       http://localhost:8000/admin/"
+	@echo "  Mailpit            http://localhost:8025"
+	@echo ""
+
 # up:
 # 	docker-compose up --build -d
-# 	@echo "起動完了 → http://localhost:5173"
-# 	@echo "DB が必要な場合: make db-up  または  make up-all"
+# 	@$(MAKE) --no-print-directory local-urls
 
 up:
 	docker-compose --profile db up --build -d
-	@echo "起動完了（DB 含む）→ http://localhost:5173"
+	@$(MAKE) --no-print-directory local-urls
 
 db-up:
 	docker-compose --profile db up -d myapp-db

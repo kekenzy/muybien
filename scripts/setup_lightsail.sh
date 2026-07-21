@@ -101,6 +101,10 @@ content = content.replace(
     "https://yourdomain.com,https://www.yourdomain.com",
     "http://57.182.190.160,https://57.182.190.160"
 )
+content = content.replace(
+    "FRONTEND_BASE_URL=https://yourdomain.com",
+    "FRONTEND_BASE_URL=https://57.182.190.160"
+)
 env_path.write_text(content)
 PYEOF
 

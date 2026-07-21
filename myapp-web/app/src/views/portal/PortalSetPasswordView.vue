@@ -2,8 +2,8 @@
   <div class="flex items-center justify-center min-h-[calc(100vh-3.5rem)] px-6 py-12">
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
-        <div class="text-4xl mb-3">🔬</div>
-        <h1 class="text-2xl font-bold">永井のLab</h1>
+        <div class="text-4xl mb-3">🗓️</div>
+        <h1 class="text-2xl font-bold">お客様ポータル</h1>
         <p class="text-sm text-white/60 mt-2">パスワードを設定してください</p>
       </div>
 
@@ -13,17 +13,13 @@
 
       <template v-else-if="done">
         <div class="bg-green-500/10 border border-green-500/30 text-green-300 rounded-xl p-4 text-sm mb-6">
-          {{
-            isCustomer
-              ? 'パスワードを設定しました。お客様ポータルからログインしてください。'
-              : 'パスワードを設定しました。ログイン画面からログインしてください。'
-          }}
+          パスワードを設定しました。お客様ポータルからログインしてください。
         </div>
         <router-link
-          :to="isCustomer ? '/portal/login' : '/lab/login'"
+          to="/portal/login"
           class="block text-center bg-primary text-white py-3 rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
         >
-          {{ isCustomer ? 'ポータルログインへ' : 'ログイン画面へ' }}
+          ポータルログインへ
         </router-link>
       </template>
 
@@ -84,7 +80,6 @@ const passwordConfirm = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 const done = ref(false)
-const isCustomer = ref(false)
 
 async function submit() {
   if (password.value !== passwordConfirm.value) {
@@ -95,8 +90,7 @@ async function submit() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const result = await setPassword(uid, token, password.value)
-    isCustomer.value = result.is_customer
+    await setPassword(uid, token, password.value)
     done.value = true
   } catch (e: unknown) {
     const detail =

@@ -51,8 +51,9 @@ Django REST API + Vue 3 SPA 構成。**CSS は Tailwind CSS 4**（scoped CSS / S
 | GET | `/v1/api/lab/contacts` | お問い合わせ一覧（要認証） |
 | GET | `/v1/api/lab/contacts/<id>` | お問い合わせ詳細（要認証） |
 | GET/POST | `/v1/api/lab/customers` | 顧客管理 |
-| POST | `/v1/api/lab/customers/<id>/invite` | 顧客をLabログインユーザーとして招待 |
+| POST | `/v1/api/lab/customers/<id>/invite` | 顧客をLabログインユーザーとして招待（再送可） |
 | GET/POST | `/v1/api/lab/users` | ユーザー管理（Django User） |
+| POST | `/v1/api/lab/users/<id>/invite` | ユーザーへ招待メール再送（リンク期限切れの救済） |
 | GET/POST | `/v1/api/lab/roles` | 権限管理（ロール・メニュー権限・メンバー） |
 
 ※ DRF Router は使わず直接 `path()` 登録。trailing_slash なし。
@@ -135,4 +136,5 @@ make prod-down              # 本番停止
 | `SECRET_KEY` | Django シークレットキー（本番必須） |
 | `RDS_*` | PostgreSQL 接続情報 |
 | `CONTACT_NOTIFY_EMAIL` | コンタクト通知先メール |
+| `FRONTEND_BASE_URL` | 招待メールのリンク先（本番は公開 URL。未設定だと localhost） |
 | `AWS_SES_*` | 本番メール送信用 AWS SES 設定 |

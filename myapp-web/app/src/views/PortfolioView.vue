@@ -3,7 +3,7 @@
     <div class="max-w-4xl mx-auto">
       <div class="text-center mb-16">
         <span class="text-xs font-semibold tracking-widest text-primary uppercase">Portfolio</span>
-        <h1 class="text-3xl font-bold mt-2">実績・ポートフォリオ</h1>
+        <h1 class="text-3xl font-bold mt-2">{{ heading }}</h1>
       </div>
 
       <div class="grid md:grid-cols-2 gap-6">
@@ -12,7 +12,7 @@
           :key="work.title"
           class="p-8 rounded-2xl border border-gray-100 hover:border-primary/30 hover:shadow-md transition-all"
         >
-          <component :is="work.icon" class="w-7 h-7 text-primary mb-4" />
+          <component :is="iconFor(work.icon)" class="w-7 h-7 text-primary mb-4" />
           <div class="text-xs text-gray-400 mb-1">{{ work.period }}</div>
           <h2 class="font-semibold text-lg mb-3">{{ work.title }}</h2>
           <p class="text-sm text-gray-500 leading-relaxed mb-5">{{ work.desc }}</p>
@@ -41,37 +41,36 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { Building2, CalendarCheck, BotMessageSquare, Sprout } from 'lucide-vue-next'
+import { fetchSiteContent } from '../lib/api'
 
-const works = [
-  {
-    icon: Building2,
-    title: '社内業務管理プラットフォーム',
-    period: '2023〜2024',
-    desc: '人事・営業・プロジェクト管理を統合したSaaS型Webアプリ。Claude活用で開発工数を40%削減。',
-    tags: ['Django', 'Vue3', 'AWS', 'PostgreSQL', 'Claude API'],
-  },
-  {
-    icon: CalendarCheck,
-    title: '東西南北（よもひろ）館 — 予約・決済システム',
-    period: '2023',
-    desc: 'Django + Square API 連携による旅館向けオンライン予約管理。クレジット決済・SMS通知・キャンセル自動処理・売上レポートを実装。本番運用中。',
-    tags: ['Django', 'Square API', 'AWS SES', 'Lightsail'],
-    url: 'https://yomohirokan.com/',
-  },
-  {
-    icon: BotMessageSquare,
-    title: 'AIチャットボット基盤',
-    period: '2024',
-    desc: 'Claude API + RAGを活用した社内ナレッジQ&Aシステム。SSEによるストリーミング対応。',
-    tags: ['Claude API', 'RAG', 'Django', 'Vue3', 'SSE'],
-  },
-  {
-    icon: Sprout,
-    title: '農業IoTデータ可視化',
-    period: '2022〜2023',
-    desc: 'Raspberry Pi センサーデータのリアルタイム収集・可視化ダッシュボード。',
-    tags: ['Python', 'Raspberry Pi', 'Django', 'Chart.js'],
-  },
-]
+const ICONS: Record<string, any> = { Building2, CalendarCheck, BotMessageSquare, Sprout }
+function iconFor(name: string) {
+  return ICONS[name] ?? Building2
+}
+
+interface Work {
+  icon: string
+  title: string
+  period: string
+  desc: string
+  tags: string[]
+  url?: string
+}
+
+const heading = ref('実績・ポートフォリオ')
+const works = ref<Work[]>([])
+
+async function load() {
+  try {
+    const content = await fetchSiteContent()
+    heading.value = content.texts.portfolio_heading || heading.value
+    works.value = (content.items.portfolio ?? []).map((i) => i.data as unknown as Work)
+  } catch {
+    // 取得失敗時は空表示のまま
+  }
+}
+
+onMounted(load)
 </script>
