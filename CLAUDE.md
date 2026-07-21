@@ -81,7 +81,7 @@ Labは「権限管理」画面でロールを作成し、ロールごとに各�
 make up              # コンテナ起動
 make down            # コンテナ停止
 make restart         # コンテナ再起動
-make docker-reflesh  # 未使用の Docker イメージ・ビルドキャッシュを削除（ボリュームは残す）
+make docker-refresh  # 未使用の Docker イメージ・ビルドキャッシュを削除（ボリュームは残す）
 make logs            # 全コンテナログ
 make api-logs        # API ログ
 make api-bash        # API コンテナ内シェル
