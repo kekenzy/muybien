@@ -77,7 +77,7 @@
       <div class="max-w-4xl mx-auto">
         <div class="text-center mb-16">
           <span class="text-xs font-semibold tracking-widest text-primary uppercase">Apps</span>
-          <h2 class="text-3xl font-bold mt-2 text-gray-900">{{ texts.profile_apps_heading || '制作アプリ' }}</h2>
+          <h2 class="text-3xl font-bold mt-2 text-gray-900">{{ texts.profile_apps_heading || '作成物' }}</h2>
         </div>
 
         <div class="grid md:grid-cols-2 gap-6">
@@ -118,11 +118,11 @@
             <a
               v-if="app.url"
               :href="app.url"
-              target="_blank"
-              rel="noopener noreferrer"
+              :target="isExternal(app.url) ? '_blank' : undefined"
+              :rel="isExternal(app.url) ? 'noopener noreferrer' : undefined"
               class="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              アプリ詳細を見る →
+              {{ isExternal(app.url) ? 'アプリ詳細を見る →' : 'ページを見る →' }}
             </a>
           </div>
         </div>
@@ -224,6 +224,10 @@ function toApp(item: ContentItem): AppItem {
     icon: item.image || data.icon_url,
     screenshot: item.image_secondary || data.screenshot_url,
   }
+}
+
+function isExternal(url: string): boolean {
+  return /^https?:\/\//i.test(url)
 }
 
 async function load() {

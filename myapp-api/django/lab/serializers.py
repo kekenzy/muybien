@@ -2,7 +2,7 @@ from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Customer, DiaryEntry, LabTask, Role, RoleMenuPermission
+from .models import Customer, DiaryEntry, LabTask, Memo, Role, RoleMenuPermission
 
 User = get_user_model()
 
@@ -46,6 +46,13 @@ class DiaryEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = DiaryEntry
         fields = ['id', 'date', 'title', 'content', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MemoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Memo
+        fields = ['id', 'title', 'content', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 

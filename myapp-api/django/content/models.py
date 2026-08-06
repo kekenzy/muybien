@@ -8,7 +8,7 @@ SECTION_CHOICES = [
     ('portfolio', '実績・ポートフォリオ'),
     ('profile_values', 'プロフィール: こんな人です'),
     ('profile_career', 'プロフィール: キャリア'),
-    ('profile_apps', 'プロフィール: 制作アプリ'),
+    ('profile_apps', 'プロフィール: 作成物'),
     ('profile_skills', 'プロフィール: 技術スタック'),
 ]
 

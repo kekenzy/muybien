@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ピクスコ for ベースボール | 少年野球のスコア記録を、家族みんなで。</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  :root{
+    --seed:#6E8B6A;
+    --seed-dark:#4F6B4C;
+    --accent:#D98E64;
+    --accent-dark:#B96D42;
+    --cream:#FBF8F1;
+    --card:#FFFFFF;
+    --text:#3C3A34;
+    --text-soft:#75705F;
+    --border:#E7E1D3;
+    --amber:#E9C468;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:"Hiragino Sans","Yu Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--cream);
+    color:var(--text);
+    line-height:1.75;
+  }
+  img,svg{display:block;max-width:100%;}
+  a{color:inherit;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+
+  /* Header */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(251,248,241,0.9);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1080px;margin:0 auto;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;color:var(--seed-dark);}
+  .brand svg{width:30px;height:30px;}
+  .nav-links{display:flex;gap:28px;font-size:14px;font-weight:600;color:var(--text-soft);}
+  .nav-links a:hover{color:var(--seed-dark);}
+  .cta-btn{
+    text-decoration:none;display:inline-block;
+    background:var(--accent);color:#fff;font-weight:700;font-size:14px;
+    padding:10px 22px;border-radius:999px;border:none;cursor:pointer;
+    box-shadow:0 6px 16px rgba(217,142,100,0.35);
+    white-space:nowrap;
+  }
+  .cta-btn:hover{background:var(--accent-dark);}
+  @media (max-width:720px){ .nav-links{display:none;} }
+
+  /* Hero */
+  .hero{
+    padding:76px 0 60px;
+    position:relative;
+    background:
+      linear-gradient(155deg, rgba(251,248,241,0.93), rgba(251,248,241,0.86)),
+      url('lp_images/hero-youth-game.jpg') center 30%/cover no-repeat;
+  }
+  .hero-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:48px;align-items:center;}
+  @media (max-width:860px){ .hero-grid{grid-template-columns:1fr;} }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    background:#E4EBE2;color:var(--seed-dark);
+    font-size:13px;font-weight:700;
+    padding:7px 14px;border-radius:999px;margin-bottom:20px;
+  }
+  h1{font-size:38px;font-weight:800;line-height:1.45;letter-spacing:-0.01em;margin-bottom:20px;}
+  h1 .accent{color:var(--accent-dark);}
+  @media (max-width:520px){ h1{font-size:29px;} }
+  .lead{font-size:16px;color:var(--text-soft);margin-bottom:30px;max-width:480px;}
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+  .btn-primary{
+    text-decoration:none;display:inline-block;
+    background:var(--seed);color:#fff;font-weight:700;font-size:15px;
+    padding:15px 30px;border-radius:14px;border:none;cursor:pointer;
+    box-shadow:0 10px 22px rgba(110,139,106,0.32);
+  }
+  .btn-primary:hover{background:var(--seed-dark);}
+  .btn-ghost{
+    font-weight:700;font-size:15px;color:var(--text);
+    padding:15px 22px;border-radius:14px;border:1.5px solid var(--border);
+    background:#fff;
+  }
+  .btn-ghost:hover{border-color:var(--seed);}
+  .hero-note{margin-top:16px;font-size:13px;color:var(--text-soft);}
+
+  /* Phone mock */
+  .phone{
+    background:var(--card);border-radius:32px;border:1px solid var(--border);
+    box-shadow:0 30px 60px -25px rgba(60,58,52,0.35);
+    padding:18px;max-width:320px;margin:0 auto;
+  }
+  .phone-bar{display:flex;align-items:center;gap:8px;background:#E4EBE2;border-radius:999px;padding:8px 12px;margin-bottom:14px;}
+  .phone-bar span{font-weight:700;font-size:13px;color:var(--seed-dark);}
+  .score-row{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin-bottom:10px;}
+  .score-row .date{width:40px;text-align:center;background:#E4EBE2;border-radius:10px;padding:6px 0;font-size:11px;font-weight:700;color:var(--seed-dark);}
+  .score-row .info{flex:1;padding:0 10px;}
+  .score-row .team{font-size:11px;color:var(--text-soft);}
+  .score-row .vs{font-weight:800;font-size:14px;margin:2px 0 6px;}
+  .pill{display:inline-block;background:var(--seed);color:#fff;font-size:11px;font-weight:700;border-radius:8px;padding:3px 8px;}
+  .pill.lose{background:#EFEAE0;color:var(--text-soft);}
+  .thumb{width:42px;height:42px;border-radius:10px;background:var(--accent);opacity:0.85;}
+  .diamond-wrap{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;justify-content:center;}
+
+  /* Section generic */
+  section{padding:64px 0;}
+  .section-head{text-align:center;max-width:600px;margin:0 auto 44px;}
+  .section-head .eyebrow{margin-bottom:14px;}
+  h2{font-size:28px;font-weight:800;margin-bottom:14px;}
+  @media (max-width:520px){ h2{font-size:23px;} }
+  .section-head p{color:var(--text-soft);font-size:15px;}
+
+  /* Problem */
+  .problem{background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .problem-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+  @media (max-width:820px){ .problem-grid{grid-template-columns:1fr;} }
+  .problem-card{background:var(--cream);border-radius:20px;padding:26px;border:1px solid var(--border);}
+  .problem-card .icon{font-size:26px;margin-bottom:14px;}
+  .problem-card h3{font-size:16px;font-weight:700;margin-bottom:8px;}
+  .problem-card p{font-size:14px;color:var(--text-soft);}
+
+  /* Features */
+  .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  @media (max-width:900px){ .feature-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:600px){ .feature-grid{grid-template-columns:1fr;} }
+  .feature-card{
+    background:var(--card);border:1px solid var(--border);border-radius:22px;
+    padding:26px;transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .feature-card:hover{transform:translateY(-3px);box-shadow:0 16px 30px -18px rgba(60,58,52,0.3);}
+  .feature-icon{
+    width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    background:#E4EBE2;font-size:22px;margin-bottom:16px;
+  }
+  .feature-card:nth-child(3n-1) .feature-icon,
+  .feature-card:nth-child(3n) .feature-icon{background:#F6DCC7;}
+  .feature-card h3{font-size:16px;font-weight:700;margin-bottom:8px;}
+  .feature-card p{font-size:14px;color:var(--text-soft);}
+
+  /* Steps */
+  .steps{background:#fff;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+  .step-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;position:relative;}
+  @media (max-width:820px){ .step-grid{grid-template-columns:1fr;} }
+  .step{text-align:center;}
+  .step-num{
+    width:44px;height:44px;border-radius:50%;background:var(--seed);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;
+    margin:0 auto 16px;
+  }
+  .step h3{font-size:16px;font-weight:700;margin-bottom:8px;}
+  .step p{font-size:14px;color:var(--text-soft);max-width:260px;margin:0 auto;}
+
+  /* Audience */
+  .audience-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  @media (max-width:820px){ .audience-grid{grid-template-columns:1fr;} }
+  .audience-card{
+    background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;
+    display:flex;gap:14px;align-items:flex-start;
+  }
+  .audience-card .emoji{font-size:24px;}
+  .audience-card h3{font-size:15px;font-weight:700;margin-bottom:4px;}
+  .audience-card p{font-size:13px;color:var(--text-soft);}
+
+  /* CTA banner */
+  .cta-banner{
+    margin:0 24px;max-width:1032px;margin-left:auto;margin-right:auto;
+    background:
+      linear-gradient(135deg, rgba(110,139,106,0.88), rgba(79,107,76,0.92)),
+      url('lp_images/crowd-cheer.jpg') center 20%/cover no-repeat;
+    border-radius:28px;padding:56px 40px;text-align:center;color:#fff;
+  }
+
+  /* Photo band */
+  .photo-band{
+    position:relative;
+    height:280px;
+    border-radius:0;
+    overflow:hidden;
+  }
+  .photo-band img{
+    width:100%;height:100%;object-fit:cover;object-position:center 30%;
+  }
+  .photo-band .overlay{
+    position:absolute;inset:0;
+    background:linear-gradient(0deg, rgba(60,58,52,0.72) 0%, rgba(60,58,52,0.15) 55%, rgba(60,58,52,0) 100%);
+    display:flex;align-items:flex-end;justify-content:center;
+    padding-bottom:26px;
+  }
+  .photo-band .overlay p{
+    color:#fff;font-weight:700;font-size:16px;text-align:center;
+    text-shadow:0 2px 8px rgba(0,0,0,0.35);
+  }
+  @media (max-width:600px){ .photo-band{height:200px;} .photo-band .overlay p{font-size:14px;padding:0 20px;} }
+  .cta-banner h2{color:#fff;}
+  .cta-banner p{color:rgba(255,255,255,0.85);max-width:480px;margin:0 auto 28px;font-size:15px;}
+  .cta-banner .btn-primary{background:#fff;color:var(--seed-dark);box-shadow:none;}
+  .cta-banner .btn-primary:hover{background:#F3F0E6;}
+
+  footer{padding:36px 0;text-align:center;color:var(--text-soft);font-size:13px;}
+  footer .brand{justify-content:center;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#FBF8F1" stroke="#6E8B6A" stroke-width="1.5"/><path d="M4 8.5C7 7 9 10 12 8.5C15 7 17 10 20 8.5" stroke="#D98E64" stroke-width="1.3" fill="none"/><path d="M4 15.5C7 14 9 17 12 15.5C15 14 17 17 20 15.5" stroke="#D98E64" stroke-width="1.3" fill="none"/></svg>
+      ピクスコ
+    </div>
+    <nav class="nav-links">
+      <a href="#features">機能</a>
+      <a href="#steps">使い方</a>
+      <a href="#audience">こんな方に</a>
+    </nav>
+    <a class="cta-btn" href="https://picscoforbaseball.web.app/">無料ではじめる</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">⚾ 少年野球のスコア記録アプリ</span>
+      <h1>その一球の記録を、<br><span class="accent">家族みんなの思い出</span>に。</h1>
+      <p class="lead">
+        紙のスコアブックとバラバラの写真、もう卒業。ピクスコなら、試合のスコアも、選手の成績も、
+        あの日の写真も、チームの保護者やコーチとまとめて共有できます。
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="https://picscoforbaseball.web.app/">無料ではじめる</a>
+        <button class="btn-ghost">機能を見る ↓</button>
+      </div>
+      <div class="hero-note">スマホからもPCからも、ブラウザですぐに使えます。</div>
+    </div>
+    <div>
+      <div class="phone">
+        <div class="phone-bar">⚾ <span>ピクスコ</span></div>
+        <div class="score-row">
+          <div class="date">7/5</div>
+          <div class="info">
+            <div class="team">〇〇少年野球クラブ</div>
+            <div class="vs">vs 隣町ファイターズ</div>
+            <span class="pill">勝 8 - 3</span>
+          </div>
+          <div class="thumb"></div>
+        </div>
+        <div class="score-row">
+          <div class="date">6/28</div>
+          <div class="info">
+            <div class="team">〇〇少年野球クラブ</div>
+            <div class="vs">vs 東ブレイブス</div>
+            <span class="pill lose">負 2 - 4</span>
+          </div>
+          <div class="thumb"></div>
+        </div>
+        <div class="diamond-wrap">
+          <svg width="140" height="120" viewBox="0 0 140 120">
+            <polygon points="70,15 120,65 70,110 20,65" fill="none" stroke="#6E8B6A" stroke-width="2"/>
+            <circle cx="70" cy="110" r="6" fill="#D98E64"/>
+            <circle cx="120" cy="65" r="6" fill="#EFEAE0" stroke="#6E8B6A" stroke-width="1.5"/>
+            <circle cx="70" cy="15" r="6" fill="#6E8B6A"/>
+            <circle cx="20" cy="65" r="6" fill="#EFEAE0" stroke="#6E8B6A" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="photo-band">
+  <img src="lp_images/hero-youth-game.jpg" alt="少年野球の試合の様子">
+  <div class="overlay">
+    <p>グラウンドで生まれる、毎週末のドラマを記録しよう。</p>
+  </div>
+</div>
+
+<section class="problem">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">こんな悩み、ありませんか？</span>
+      <h2>紙とバラバラの写真では、限界がある。</h2>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="icon">📓</div>
+        <h3>スコアブックが大変</h3>
+        <p>紙のスコアブックは記号を覚えるのが難しく、記録係の負担も大きい。あとから成績を集計するのも一苦労。</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">📷</div>
+        <h3>写真が誰かのスマホの中</h3>
+        <p>せっかくの好プレーの写真も、撮った保護者のスマホに眠ったまま。チームで見返せない。</p>
+      </div>
+      <div class="problem-card">
+        <div class="icon">🙋</div>
+        <h3>共有する手段がない</h3>
+        <p>「今日の試合どうだった？」を伝える手段がグループLINEの文字だけ。試合の記録として残らない。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">機能</span>
+      <h2>スコアも、写真も、これ1つで。</h2>
+      <p>難しい記号を覚えなくても、タップだけで試合を記録。チームの誰が見ても分かりやすく残ります。</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⚾</div>
+        <h3>かんたんスコア記録</h3>
+        <p>打席結果をタップで入力するだけ。ダイヤモンド表示で走者の状況がひと目で分かります。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>ボックススコア自動集計</h3>
+        <p>打撃・投球成績を自動で集計。個人成績もチーム成績も、試合後すぐに確認できます。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧢</div>
+        <h3>チーム・打線管理</h3>
+        <p>選手名簿や打順、守備位置、投打の左右をまとめて管理。途中交代もその場で反映。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👨‍👩‍👧‍👦</div>
+        <h3>グループで共有</h3>
+        <p>招待リンクひとつで保護者やコーチをグループに招待。試合の記録をみんなで見守れます。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖼️</div>
+        <h3>試合の写真を記録</h3>
+        <p>好プレーやベンチの様子を試合ごとに残せます。スコアと一緒だから、思い出がより鮮明に。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>スマホでもPCでも</h3>
+        <p>アプリのインストール不要。ブラウザからそのままアクセスして、いつでもどこでも記録・閲覧。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="steps" id="steps">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">使い方</span>
+      <h2>はじめかたは、たったの3ステップ</h2>
+    </div>
+    <div class="step-grid">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>チームを登録</h3>
+        <p>チーム名と選手名簿を登録。打順や守備位置もサクッと設定できます。</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>試合を記録</h3>
+        <p>対戦相手を選んで試合開始。打席ごとにタップで結果を記録し、写真も添えられます。</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>みんなと共有</h3>
+        <p>招待リンクで保護者やコーチをグループに招待。ボックススコアと写真をみんなで振り返り。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="audience">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">こんな方におすすめ</span>
+      <h2>チームに関わる、すべての人へ。</h2>
+    </div>
+    <div class="audience-grid">
+      <div class="audience-card">
+        <div class="emoji">📋</div>
+        <div>
+          <h3>記録係の保護者の方</h3>
+          <p>紙のスコアブックより手軽に、正確に記録したい方。</p>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="emoji">🏃</div>
+        <div>
+          <h3>監督・コーチの方</h3>
+          <p>選手の打撃・投球成績をすぐに確認して指導に活かしたい方。</p>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="emoji">💛</div>
+        <div>
+          <h3>応援するご家族</h3>
+          <p>試合に行けなくても、結果と写真でわが子の活躍を見届けたい方。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="cta-banner">
+      <h2>次の試合から、ピクスコで記録しませんか。</h2>
+      <p>登録は無料。紙のスコアブックとバラバラの写真から、チームみんなで見返せる記録へ。</p>
+      <a class="btn-primary" href="https://picscoforbaseball.web.app/">無料ではじめる</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand" style="justify-content:center;">
+      <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><circle cx="12" cy="12" r="11" fill="#FBF8F1" stroke="#6E8B6A" stroke-width="1.5"/><path d="M4 8.5C7 7 9 10 12 8.5C15 7 17 10 20 8.5" stroke="#D98E64" stroke-width="1.3" fill="none"/><path d="M4 15.5C7 14 9 17 12 15.5C15 14 17 17 20 15.5" stroke="#D98E64" stroke-width="1.3" fill="none"/></svg>
+      ピクスコ
+    </div>
+    <p>&copy; 2026 ピクスコ for ベースボール. 少年野球のための、みんなで見返せるスコアブック。</p>
+  </div>
+</footer>
+
+</body>
+</html>

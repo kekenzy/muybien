@@ -33,6 +33,8 @@ if [ ! -f node_modules/.bin/vite ]; then
     npm install
 fi
 npm run build
+# macOS 等で dist が 0700 になると nginx ワーカーが読めず 403 になる
+chmod -R a+rX dist
 cd "$PROJECT_ROOT"
 
 # サーバーにディレクトリ作成
@@ -44,6 +46,9 @@ echo "📤 ファイルを転送中..."
 rsync -avz --delete \
     "${RSYNC_EXCLUDES[@]}" \
     "$PROJECT_ROOT/" "${SSH_HOST}:${PROD_DIR}/"
+
+# 転送後も念のため dist を nginx から読める権限にする
+ssh "${SSH_HOST}" "chmod -R a+rX ${PROD_DIR}/myapp-web/app/dist"
 
 # リモートでデプロイスクリプト実行
 echo "🔄 本番コンテナを起動中..."

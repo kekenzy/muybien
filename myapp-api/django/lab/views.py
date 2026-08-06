@@ -18,13 +18,14 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .invitations import resend_invite_email, send_invite_email
-from .models import Customer, DiaryEntry, LabTask, Role, RoleMenuPermission, UserProfile
+from .models import Customer, DiaryEntry, LabTask, Memo, Role, RoleMenuPermission, UserProfile
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
     ContactAdminSerializer,
     CustomerSerializer,
     DiaryEntrySerializer,
     LabTaskSerializer,
+    MemoSerializer,
     RoleSerializer,
     UserAdminSerializer,
 )
@@ -238,6 +239,20 @@ class DiaryDetailView(generics.RetrieveUpdateDestroyAPIView):
     menu_key = 'diary'
     serializer_class = DiaryEntrySerializer
     queryset = DiaryEntry.objects.all()
+
+
+class MemoListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'memo'
+    serializer_class = MemoSerializer
+    queryset = Memo.objects.all()
+
+
+class MemoDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'memo'
+    serializer_class = MemoSerializer
+    queryset = Memo.objects.all()
 
 
 class UserListCreateView(generics.ListCreateAPIView):

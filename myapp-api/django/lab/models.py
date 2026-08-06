@@ -7,6 +7,7 @@ MENU_CHOICES = [
     ('customers', '顧客管理'),
     ('tasks', 'タスク一覧'),
     ('diary', '日記'),
+    ('memo', 'メモ'),
     ('reservations', '予約管理'),
     ('users', 'ユーザー管理'),
     ('roles', '権限管理'),
@@ -140,3 +141,18 @@ class DiaryEntry(models.Model):
 
     def __str__(self):
         return f'{self.date}'
+
+
+class Memo(models.Model):
+    title = models.CharField('タイトル', max_length=200, blank=True)
+    content = models.TextField('本文', blank=True)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
+
+    class Meta:
+        verbose_name = 'メモ'
+        verbose_name_plural = 'メモ'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title or f'メモ #{self.pk}'

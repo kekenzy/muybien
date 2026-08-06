@@ -25,6 +25,15 @@ const router = createRouter({
     { path: '/profile', component: () => import('../views/ProfileView.vue') },
     { path: '/contact', component: () => import('../views/ContactView.vue') },
     { path: '/news/:id', component: () => import('../views/AnnouncementDetailView.vue') },
+    // 静的LP（public/picsco）。Viteは /picsco/ をSPAに落とすため index.html へハード遷移する
+    {
+      path: '/picsco/:pathMatch(.*)*',
+      beforeEnter: () => {
+        window.location.replace('/picsco/index.html')
+        return false
+      },
+      component: { render: () => null },
+    },
     {
       path: '/lab',
       component: () => import('../layouts/LabLayout.vue'),

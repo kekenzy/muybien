@@ -454,7 +454,7 @@ export const CONTENT_SECTION_OPTIONS: { key: ContentSection; label: string }[] =
   { key: 'portfolio', label: '実績・ポートフォリオ' },
   { key: 'profile_values', label: 'プロフィール: こんな人です' },
   { key: 'profile_career', label: 'プロフィール: キャリア' },
-  { key: 'profile_apps', label: 'プロフィール: 制作アプリ' },
+  { key: 'profile_apps', label: 'プロフィール: 作成物' },
   { key: 'profile_skills', label: 'プロフィール: 技術スタック' },
 ]
 
