@@ -144,6 +144,7 @@ class DiaryEntry(models.Model):
 
 
 class Memo(models.Model):
+    date = models.DateField('日付', null=True, blank=True, db_index=True)
     title = models.CharField('タイトル', max_length=200, blank=True)
     content = models.TextField('本文', blank=True)
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
@@ -152,7 +153,7 @@ class Memo(models.Model):
     class Meta:
         verbose_name = 'メモ'
         verbose_name_plural = 'メモ'
-        ordering = ['-created_at']
+        ordering = ['-date', '-created_at']
 
     def __str__(self):
         return self.title or f'メモ #{self.pk}'

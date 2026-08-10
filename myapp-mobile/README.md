@@ -16,6 +16,18 @@ flutter run   # 接続中のシミュレータ/実機/エミュレータで起�
 
 `ios/` `android/` のプラットフォームコードは生成済み。`lib/config.dart` の `apiBaseUrl` を実機/エミュレータの接続先に合わせて調整すること（Android エミュレータはデフォルトの `10.0.2.2` でOK、実機は開発PCのLAN IPに変更）。
 
+## 実機インストール（`make ios-install`）
+
+Debug ビルドはホーム画面から起動できない（即終了する）ため、Release で入れます。API はデフォルトで本番 `https://muybien.jp/v1/api` です。
+
+```bash
+make ios-install
+# ローカルAPIを使う場合
+API_BASE_URL=http://192.168.x.x:8000/v1/api make ios-install
+```
+
+初回は「設定 > 一般 > VPNとデバイス管理」で開発元を信頼すること。
+
 ## 注意点
 
 - **Android の HTTP通信**: ローカル開発でAPIをhttp（TLSなし）で叩くため、`android/app/src/debug/AndroidManifest.xml` に `android:usesCleartextTraffic="true"` を設定済み（debugビルドのみ有効、本番releaseには影響しない）。

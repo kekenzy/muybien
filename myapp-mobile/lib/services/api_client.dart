@@ -97,23 +97,38 @@ class ApiClient {
   Future<List<Map<String, dynamic>>> listMemos() async {
     final res = await _authedRequest('GET', '/lab/memos');
     if (res.statusCode != 200) {
-      throw ApiException(res.statusCode, 'メモの取得に失敗しました');
+      throw ApiException(res.statusCode, _errorMessage(res, 'メモの取得に失敗しました'));
     }
     return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>> createMemo(String title, String content) async {
-    final res = await _authedRequest('POST', '/lab/memos', body: {'title': title, 'content': content});
+  Future<Map<String, dynamic>> createMemo(String title, String content, {DateTime? date}) async {
+    final body = <String, dynamic>{
+      'title': title,
+      'content': content,
+      if (date != null) 'date': _ymd(date),
+    };
+    final res = await _authedRequest('POST', '/lab/memos', body: body);
     if (res.statusCode != 201) {
-      throw ApiException(res.statusCode, 'メモの作成に失敗しました');
+      throw ApiException(res.statusCode, _errorMessage(res, 'メモの作成に失敗しました'));
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateMemo(int id, String title, String content) async {
-    final res = await _authedRequest('PATCH', '/lab/memos/$id', body: {'title': title, 'content': content});
+  Future<Map<String, dynamic>> updateMemo(
+    int id,
+    String title,
+    String content, {
+    DateTime? date,
+  }) async {
+    final body = <String, dynamic>{
+      'title': title,
+      'content': content,
+      if (date != null) 'date': _ymd(date),
+    };
+    final res = await _authedRequest('PATCH', '/lab/memos/$id', body: body);
     if (res.statusCode != 200) {
-      throw ApiException(res.statusCode, 'メモの更新に失敗しました');
+      throw ApiException(res.statusCode, _errorMessage(res, 'メモの更新に失敗しました'));
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -121,7 +136,62 @@ class ApiClient {
   Future<void> deleteMemo(int id) async {
     final res = await _authedRequest('DELETE', '/lab/memos/$id');
     if (res.statusCode != 204) {
-      throw ApiException(res.statusCode, 'メモの削除に失敗しました');
+      throw ApiException(res.statusCode, _errorMessage(res, 'メモの削除に失敗しました'));
     }
+  }
+
+  Future<List<Map<String, dynamic>>> listDiaries() async {
+    final res = await _authedRequest('GET', '/lab/diaries');
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, '日記の取得に失敗しました'));
+    }
+    return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createDiary(String title, String content, DateTime date) async {
+    final res = await _authedRequest('POST', '/lab/diaries', body: {
+      'date': _ymd(date),
+      'title': title,
+      'content': content,
+    });
+    if (res.statusCode != 201) {
+      throw ApiException(res.statusCode, _errorMessage(res, '日記の作成に失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateDiary(
+    int id,
+    String title,
+    String content,
+    DateTime date,
+  ) async {
+    final res = await _authedRequest('PATCH', '/lab/diaries/$id', body: {
+      'date': _ymd(date),
+      'title': title,
+      'content': content,
+    });
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, '日記の更新に失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<void> deleteDiary(int id) async {
+    final res = await _authedRequest('DELETE', '/lab/diaries/$id');
+    if (res.statusCode != 204) {
+      throw ApiException(res.statusCode, _errorMessage(res, '日記の削除に失敗しました'));
+    }
+  }
+
+  String _ymd(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _errorMessage(http.Response res, String fallback) {
+    try {
+      final data = jsonDecode(res.body);
+      if (data is Map && data['detail'] != null) return '${data['detail']} (${res.statusCode})';
+    } catch (_) {}
+    return '$fallback (${res.statusCode})';
   }
 }

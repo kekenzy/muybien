@@ -2,7 +2,9 @@ API_CONTAINER=muybien-api
 WEB_CONTAINER=muybien-web
 
 # docker グループ未所属時は sudo（本番サーバー等）
-DOCKER := $(shell docker info >/dev/null 2>&1 && echo docker || echo sudo docker)
+# 遅延評価(=)にして、$(DOCKER) を使わないターゲット（ios-install 等）実行時に
+# docker info の応答待ちで make 全体が固まらないようにする
+DOCKER = $(shell docker info >/dev/null 2>&1 && echo docker || echo sudo docker)
 
 .PHONY: local-urls
 
@@ -105,3 +107,12 @@ prod-down:
 	@bash scripts/prod-down.sh
 
 deploy: prod-deploy
+
+# ─────────────────────────────────────────
+# Flutterアプリ（Muybien Memo）実機インストール
+# ─────────────────────────────────────────
+ios-install:
+	@bash scripts/deploy.sh --ios --run $(DEVICE)
+
+android-install:
+	@bash scripts/deploy.sh --android --run $(DEVICE)

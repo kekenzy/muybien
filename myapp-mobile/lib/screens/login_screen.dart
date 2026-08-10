@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../config.dart';
 import '../services/api_client.dart';
-import 'memo_list_screen.dart';
+import 'home_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +17,14 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
 
+  String get _hostLabel {
+    try {
+      return Uri.parse(apiBaseUrl).host;
+    } catch (_) {
+      return apiBaseUrl;
+    }
+  }
+
   Future<void> _submit() async {
     setState(() {
       _loading = true;
@@ -25,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await ApiClient.instance.login(_usernameController.text.trim(), _passwordController.text);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MemoListScreen()),
+        MaterialPageRoute(builder: (_) => const HomeShell()),
       );
     } catch (e) {
       setState(() => _error = 'ユーザー名またはパスワードが正しくありません');
@@ -46,6 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text('永井のLab メモ', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(
+                  '接続先: $_hostLabel',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _usernameController,

@@ -1,12 +1,73 @@
 #!/bin/bash
 # ローカルから AWS Lightsail へデプロイするスクリプト
-# 使い方: ./scripts/deploy.sh  または  make prod-deploy
+# 使い方:
+#   ./scripts/deploy.sh                       本番(AWS Lightsail)へデプロイ  または  make prod-deploy
+#   ./scripts/deploy.sh --ios --run           Muybien Memo を接続中のiOS実機にビルド・インストール  または  make ios-install
+#   ./scripts/deploy.sh --android --run       Muybien Memo を接続中のAndroid実機にビルド・インストール  または  make android-install
+#   ./scripts/deploy.sh --ios --run <device_id>   デバイスを明示指定（複数台接続時など）
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=config.sh
 source "$SCRIPT_DIR/config.sh"
+
+if [[ "$1" == "--ios" || "$1" == "--android" ]]; then
+    PLATFORM="${1#--}"
+    if [[ "$2" != "--run" ]]; then
+        echo "❌ 使い方: ./scripts/deploy.sh --ios --run [device_id]"
+        echo "         ./scripts/deploy.sh --android --run [device_id]"
+        exit 1
+    fi
+    DEVICE_ID="$3"
+
+    FLUTTER_SDK_BIN="/Volumes/DevDisk/01_dev/12_flutter/99_sdk/flutter/bin"
+    if ! command -v flutter >/dev/null 2>&1; then
+        export PATH="$FLUTTER_SDK_BIN:$PATH"
+    fi
+
+    cd "$PROJECT_ROOT/myapp-mobile"
+
+    if [ -z "$DEVICE_ID" ]; then
+        echo "🔍 接続中の${PLATFORM}デバイスを検索中..."
+        PLATFORM_PATTERN="ios"
+        [[ "$PLATFORM" == "android" ]] && PLATFORM_PATTERN="^android"
+        DEVICE_ID="$(flutter devices 2>/dev/null | awk -F' • ' -v p="$PLATFORM_PATTERN" 'NF >= 3 && tolower($3) ~ p { print $2; exit }')"
+        if [ -z "$DEVICE_ID" ]; then
+            echo "❌ ${PLATFORM}デバイスが見つかりません。接続・信頼設定を確認してください。"
+            flutter devices
+            exit 1
+        fi
+        echo "✅ デバイス検出: ${DEVICE_ID}"
+    fi
+
+    echo "📱 Muybien Memo(${PLATFORM}) を ${DEVICE_ID} にビルド・インストール中..."
+    flutter pub get
+
+    # ホーム画面から起動するには Debug 不可（JIT）。Release で入れる。
+    # API は本番をデフォルト（ローカルAPIは端末から届かないことが多い）
+    API_BASE_URL="${API_BASE_URL:-https://muybien.jp/v1/api}"
+    echo "🔗 API_BASE_URL=${API_BASE_URL}"
+
+    if [[ "$PLATFORM" == "ios" ]]; then
+        flutter build ios --release --dart-define=API_BASE_URL="${API_BASE_URL}"
+        flutter install --release -d "$DEVICE_ID"
+        BUNDLE_ID="com.muybien.muybienMemo"
+        echo "🚀 端末で起動を試みます (${BUNDLE_ID})..."
+        if ! xcrun devicectl device process launch --device "$DEVICE_ID" "$BUNDLE_ID" 2>/dev/null; then
+            echo "⚠️  自動起動に失敗しました。端末上で「Muybien Memo」をタップして起動してください。"
+            echo "   （初回は「信頼されていないデベロッパ」の場合、設定 > 一般 > VPNとデバイス管理 で信頼）"
+        fi
+    else
+        flutter build apk --release --dart-define=API_BASE_URL="${API_BASE_URL}"
+        flutter install --release -d "$DEVICE_ID"
+    fi
+
+    echo ""
+    echo "✅ インストール完了（Release）。ホーム画面から起動できます。"
+    echo "   ローカルAPIに繋ぐ場合: API_BASE_URL=http://<MacのLAN IP>:8000/v1/api make ios-install"
+    exit 0
+fi
 
 echo "🚀 Lightsail へのデプロイを開始します..."
 echo "📍 ターゲット: ${SSH_USER}@${SSH_HOST}:${PROD_DIR}"

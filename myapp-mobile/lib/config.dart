@@ -6,5 +6,7 @@
 // - 本番: https://<公開ドメイン>/v1/api
 const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
+  // 実機のホーム画面起動用（make ios-install）は本番URLを dart-define で渡す。
+  // Android エミュレータのデフォルト:
   defaultValue: 'http://10.0.2.2:8000/v1/api',
 );
