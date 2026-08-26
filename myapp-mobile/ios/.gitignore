@@ -32,3 +32,6 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# リリース用 IPA エクスポート設定（Team ID 等の環境固有情報を含むため各自作成）
+exportOptions.plist

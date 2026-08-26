@@ -109,10 +109,14 @@ prod-down:
 deploy: prod-deploy
 
 # ─────────────────────────────────────────
-# Flutterアプリ（Muybien Memo）実機インストール
+# Flutterアプリ（Muybien Memo）実機インストール／リリース
 # ─────────────────────────────────────────
 ios-install:
 	@bash scripts/deploy.sh --ios --run $(DEVICE)
 
 android-install:
 	@bash scripts/deploy.sh --android --run $(DEVICE)
+
+# App Store 提出用 IPA をビルド（exportOptions.plist が無ければ Xcode の Team ID から自動生成）
+ios-release:
+	@bash scripts/deploy.sh --ios-release

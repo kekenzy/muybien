@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  App Store 提出用 IPA ビルドのエクスポート設定サンプル。
+
+  使い方:
+    cp myapp-mobile/ios/exportOptions.plist.sample myapp-mobile/ios/exportOptions.plist
+    そのうえで teamID を自分の Apple Developer Team ID に書き換える
+    （Team ID は https://developer.apple.com/account の Membership、
+    または Xcode > Runner.xcworkspace > Signing & Capabilities で確認できる）。
+
+  exportOptions.plist は Team ID などの環境固有情報を含むため .gitignore 済み。
+-->
+<plist version="1.0">
+<dict>
+    <!-- app-store: App Store Connect 提出用（TestFlight含む） -->
+    <!-- ad-hoc: 登録済み実機への配布用 -->
+    <!-- enterprise: 社内配布（Enterprise Program）用 -->
+    <!-- development: 開発用 -->
+    <key>method</key>
+    <string>app-store</string>
+
+    <key>teamID</key>
+    <string>YOUR_TEAM_ID</string>
+
+    <key>signingStyle</key>
+    <string>automatic</string>
+
+    <key>uploadBitcode</key>
+    <false/>
+
+    <key>uploadSymbols</key>
+    <true/>
+
+    <key>compileBitcode</key>
+    <false/>
+</dict>
+</plist>

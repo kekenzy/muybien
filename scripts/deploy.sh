@@ -5,6 +5,10 @@
 #   ./scripts/deploy.sh --ios --run           Muybien Memo を接続中のiOS実機にビルド・インストール  または  make ios-install
 #   ./scripts/deploy.sh --android --run       Muybien Memo を接続中のAndroid実機にビルド・インストール  または  make android-install
 #   ./scripts/deploy.sh --ios --run <device_id>   デバイスを明示指定（複数台接続時など）
+#   ./scripts/deploy.sh --ios-release         App Store 提出用 IPA をビルド  または  make ios-release
+#     （myapp-mobile/ios/exportOptions.plist が無ければ Xcode プロジェクトの
+#       DEVELOPMENT_TEAM から自動生成される。別チームの場合は
+#       myapp-mobile/ios/exportOptions.plist.sample をコピーして teamID を書き換えること）
 
 set -e
 
@@ -66,6 +70,59 @@ if [[ "$1" == "--ios" || "$1" == "--android" ]]; then
     echo ""
     echo "✅ インストール完了（Release）。ホーム画面から起動できます。"
     echo "   ローカルAPIに繋ぐ場合: API_BASE_URL=http://<MacのLAN IP>:8000/v1/api make ios-install"
+    exit 0
+fi
+
+if [[ "$1" == "--ios-release" ]]; then
+    FLUTTER_SDK_BIN="/Volumes/DevDisk/01_dev/12_flutter/99_sdk/flutter/bin"
+    if ! command -v flutter >/dev/null 2>&1; then
+        export PATH="$FLUTTER_SDK_BIN:$PATH"
+    fi
+
+    cd "$PROJECT_ROOT/myapp-mobile"
+
+    # 本番APIをデフォルトにする（App Store 提出物はローカルAPIに繋がないため）
+    API_BASE_URL="${API_BASE_URL:-https://muybien.jp/v1/api}"
+    echo "📦 Muybien Memo(iOS) のリリース用 IPA をビルド中..."
+    echo "🔗 API_BASE_URL=${API_BASE_URL}"
+
+    flutter pub get
+
+    EXPORT_OPTIONS_PLIST="${EXPORT_OPTIONS_PLIST:-ios/exportOptions.plist}"
+    if [ ! -f "$EXPORT_OPTIONS_PLIST" ]; then
+        # 未作成なら Xcode プロジェクトの DEVELOPMENT_TEAM から自動生成する
+        TEAM_ID="$(grep -m1 'DEVELOPMENT_TEAM = ' ios/Runner.xcodeproj/project.pbxproj | sed -E 's/.*DEVELOPMENT_TEAM = ([A-Z0-9]+);/\1/')"
+        if [ -z "$TEAM_ID" ]; then
+            echo "❌ ${EXPORT_OPTIONS_PLIST} が見つからず、Team ID も自動検出できませんでした。"
+            echo "   cp ios/exportOptions.plist.sample ios/exportOptions.plist"
+            echo "   を実行し、teamID を Apple Developer Team ID に書き換えてください。"
+            exit 1
+        fi
+        echo "📝 ${EXPORT_OPTIONS_PLIST} が無いため、Xcode プロジェクトの Team ID (${TEAM_ID}) から自動生成します..."
+        sed "s/YOUR_TEAM_ID/${TEAM_ID}/" ios/exportOptions.plist.sample > "$EXPORT_OPTIONS_PLIST"
+    fi
+    echo "📝 エクスポートオプション: ${EXPORT_OPTIONS_PLIST}"
+
+    flutter build ipa --release \
+        --dart-define=API_BASE_URL="${API_BASE_URL}" \
+        --export-options-plist="${EXPORT_OPTIONS_PLIST}"
+
+    IPA_PATH="$(find "$PROJECT_ROOT/myapp-mobile/build/ios/ipa" -maxdepth 1 -name '*.ipa' 2>/dev/null | head -n 1)"
+    echo ""
+    if [ -n "$IPA_PATH" ]; then
+        echo "✅ IPA ビルド完了"
+        echo "📦 出力先: ${IPA_PATH}"
+        echo "   Transporter アプリ、または"
+        echo "   xcrun altool --upload-app -f \"${IPA_PATH}\" -t ios --apiKey <KEY_ID> --apiIssuer <ISSUER_ID>"
+        echo "   で App Store Connect にアップロードできます。"
+    else
+        echo "❌ IPA の生成に失敗しました（アーカイブの署名・エクスポートでエラー）。"
+        echo "   Apple Developer Program（有料、年間\$99）への登録と、"
+        echo "   iOS Distribution 証明書・App Store 用プロビジョニングプロファイルの作成が必要です。"
+        echo "   アーカイブ自体は成功しているので、Xcode から手動エクスポートもできます:"
+        echo "     open $PROJECT_ROOT/myapp-mobile/build/ios/archive/Runner.xcarchive"
+        exit 1
+    fi
     exit 0
 fi
 
