@@ -184,6 +184,60 @@ class ApiClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> listTasks() async {
+    final res = await _authedRequest('GET', '/lab/tasks');
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'タスクの取得に失敗しました'));
+    }
+    return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> createTask(
+    String title,
+    String description,
+    String status, {
+    DateTime? dueDate,
+  }) async {
+    final body = <String, dynamic>{
+      'title': title,
+      'description': description,
+      'status': status,
+      'due_date': dueDate != null ? _ymd(dueDate) : null,
+    };
+    final res = await _authedRequest('POST', '/lab/tasks', body: body);
+    if (res.statusCode != 201) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'タスクの作成に失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateTask(
+    int id,
+    String title,
+    String description,
+    String status, {
+    DateTime? dueDate,
+  }) async {
+    final body = <String, dynamic>{
+      'title': title,
+      'description': description,
+      'status': status,
+      'due_date': dueDate != null ? _ymd(dueDate) : null,
+    };
+    final res = await _authedRequest('PATCH', '/lab/tasks/$id', body: body);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'タスクの更新に失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<void> deleteTask(int id) async {
+    final res = await _authedRequest('DELETE', '/lab/tasks/$id');
+    if (res.statusCode != 204) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'タスクの削除に失敗しました'));
+    }
+  }
+
   String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
