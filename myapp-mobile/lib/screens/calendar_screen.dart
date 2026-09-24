@@ -107,6 +107,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: _error != null ? _buildError() : _buildBody(),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'calendar_fab',
         onPressed: () => _openEditor(initialDate: _selectedDate),
         child: const Icon(Icons.add),
       ),

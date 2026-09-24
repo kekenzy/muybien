@@ -1,11 +1,14 @@
+from decimal import Decimal
+
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 # 権限管理の対象メニュー一覧。新しいLabメニューを追加する場合はここにも追加すること。
 MENU_CHOICES = [
     ('contacts', 'お問い合わせ一覧'),
     ('customers', '顧客管理'),
-    ('tasks', 'タスク一覧'),
+    ('tasks', 'タスク管理'),
     ('diary', '日記'),
     ('memo', 'メモ'),
     ('reservations', '予約管理'),
@@ -70,16 +73,43 @@ class UserProfile(models.Model):
 
 
 class LabTask(models.Model):
+    """タスク管理のタスク。ToDo（カンバン）とWBS（階層＋ガント）は同じレコードを別の見せ方で表示する。"""
+
     STATUS_CHOICES = [
         ('todo', '未着手'),
         ('in_progress', '進行中'),
+        ('review', 'レビュー中'),
         ('done', '完了'),
+        ('on_hold', '保留'),
+        ('cancelled', '中止'),
+    ]
+    PRIORITY_CHOICES = [
+        ('low', '低'),
+        ('medium', '中'),
+        ('high', '高'),
+        ('urgent', '緊急'),
     ]
 
     title = models.CharField('タイトル', max_length=200)
     description = models.TextField('詳細', blank=True)
     status = models.CharField('ステータス', max_length=20, choices=STATUS_CHOICES, default='todo')
+    priority = models.CharField('優先度', max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    start_date = models.DateField('開始日', null=True, blank=True)
     due_date = models.DateField('期限', null=True, blank=True)
+    duration_days = models.DecimalField(
+        '期間(稼働日)', max_digits=6, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('999'))],
+    )
+    progress = models.PositiveSmallIntegerField('進捗(%)', default=0, validators=[MaxValueValidator(100)])
+    parent = models.ForeignKey(
+        'self', verbose_name='親タスク', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='subtasks',
+    )
+    order = models.PositiveIntegerField('表示順', default=0)
+    # 「このタスクは dependencies に入っているタスクの完了後に開始する」（終了→開始の依存）
+    dependencies = models.ManyToManyField(
+        'self', verbose_name='先行タスク', symmetrical=False, blank=True, related_name='dependent_tasks',
+    )
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 

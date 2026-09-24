@@ -92,6 +92,7 @@ class _MemoListScreenState extends State<MemoListScreen> {
         child: _buildBody(),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'memo_fab',
         onPressed: _openEditor,
         child: const Icon(Icons.add),
       ),

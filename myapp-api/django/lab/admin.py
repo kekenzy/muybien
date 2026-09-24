@@ -5,8 +5,8 @@ from .models import Customer, DiaryEntry, LabTask, Role, RoleMenuPermission, Use
 
 @admin.register(LabTask)
 class LabTaskAdmin(admin.ModelAdmin):
-    list_display = ['title', 'status', 'due_date', 'created_at']
-    list_filter = ['status']
+    list_display = ['title', 'status', 'priority', 'start_date', 'due_date', 'progress', 'parent']
+    list_filter = ['status', 'priority']
     search_fields = ['title', 'description']
 
 

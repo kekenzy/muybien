@@ -109,13 +109,17 @@ prod-down:
 deploy: prod-deploy
 
 # ─────────────────────────────────────────
-# Flutterアプリ（Muybien Memo）実機インストール／リリース
+# Flutterアプリ（Muybien Memo）実機インストール／シミュレータ起動／リリース
 # ─────────────────────────────────────────
 ios-install:
 	@bash scripts/deploy.sh --ios --run $(DEVICE)
 
 android-install:
 	@bash scripts/deploy.sh --android --run $(DEVICE)
+
+# iOSシミュレータでローカルAPI(localhost:8000)に繋いでデバッグ起動（DEVICE=シミュレータ名/UDIDで指定可）
+ios-sim:
+	@bash scripts/deploy.sh --ios-sim "$(DEVICE)"
 
 # App Store 提出用 IPA をビルド（exportOptions.plist が無ければ Xcode の Team ID から自動生成）
 ios-release:

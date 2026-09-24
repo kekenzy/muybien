@@ -108,14 +108,22 @@ export async function setPassword(
   return data
 }
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done'
+export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'on_hold' | 'cancelled'
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 
 export interface LabTask {
   id: number
   title: string
   description: string
   status: TaskStatus
+  priority: TaskPriority
+  start_date: string | null
   due_date: string | null
+  duration_days: string | null
+  progress: number
+  parent: number | null
+  order: number
+  dependencies: number[]
   created_at: string
   updated_at: string
 }
@@ -124,7 +132,14 @@ export interface LabTaskInput {
   title: string
   description: string
   status: TaskStatus
+  priority: TaskPriority
+  start_date: string | null
   due_date: string | null
+  duration_days: string | null
+  progress: number
+  parent: number | null
+  order: number
+  dependencies: number[]
 }
 
 export interface DiaryEntry {
@@ -152,7 +167,7 @@ export async function createTask(input: LabTaskInput): Promise<LabTask> {
   return data
 }
 
-export async function updateTask(id: number, input: LabTaskInput): Promise<LabTask> {
+export async function updateTask(id: number, input: Partial<LabTaskInput>): Promise<LabTask> {
   const { data } = await api.patch<LabTask>(`/lab/tasks/${id}`, input)
   return data
 }

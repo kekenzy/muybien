@@ -208,14 +208,14 @@ class TaskListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'tasks'
     serializer_class = LabTaskSerializer
-    queryset = LabTask.objects.all()
+    queryset = LabTask.objects.prefetch_related('dependencies')
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'tasks'
     serializer_class = LabTaskSerializer
-    queryset = LabTask.objects.all()
+    queryset = LabTask.objects.prefetch_related('dependencies')
 
 
 class DiaryListCreateView(generics.ListCreateAPIView):

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'navigation.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
 import 'services/api_client.dart';
@@ -14,6 +15,7 @@ class MuyBienMemoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: '永井のLab メモ',
       theme: ThemeData(
         colorSchemeSeed: Colors.indigo,

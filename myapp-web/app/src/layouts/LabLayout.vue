@@ -111,7 +111,7 @@ const showNav = computed(
 const allNavItems: { name: string; to: string; label: string; menuKey: MenuKey }[] = [
   { name: 'lab-dashboard', to: '/lab', label: 'お問い合わせ一覧', menuKey: 'contacts' },
   { name: 'lab-customers', to: '/lab/customers', label: '顧客管理', menuKey: 'customers' },
-  { name: 'lab-tasks', to: '/lab/tasks', label: 'タスク一覧', menuKey: 'tasks' },
+  { name: 'lab-tasks', to: '/lab/tasks', label: 'タスク管理', menuKey: 'tasks' },
   { name: 'lab-diary', to: '/lab/diary', label: '日記', menuKey: 'diary' },
   { name: 'lab-reservations', to: '/lab/reservations', label: '予約管理', menuKey: 'reservations' },
   { name: 'lab-users', to: '/lab/users', label: 'ユーザー管理', menuKey: 'users' },

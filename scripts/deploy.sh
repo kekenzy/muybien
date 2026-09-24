@@ -6,6 +6,8 @@
 #   ./scripts/deploy.sh --android --run       Muybien Memo を接続中のAndroid実機にビルド・インストール  または  make android-install
 #   ./scripts/deploy.sh --ios --run <device_id>   デバイスを明示指定（複数台接続時など）
 #   ./scripts/deploy.sh --ios-release         App Store 提出用 IPA をビルド  または  make ios-release
+#   ./scripts/deploy.sh --ios-sim [device]    iOSシミュレータでローカルAPIに繋いでデバッグ起動  または  make ios-sim
+#     （device はシミュレータ名かUDID。省略時は起動中のもの→なければ最初のiPhoneを起動）
 #     （myapp-mobile/ios/exportOptions.plist が無ければ Xcode プロジェクトの
 #       DEVELOPMENT_TEAM から自動生成される。別チームの場合は
 #       myapp-mobile/ios/exportOptions.plist.sample をコピーして teamID を書き換えること）
@@ -36,9 +38,12 @@ if [[ "$1" == "--ios" || "$1" == "--android" ]]; then
         echo "🔍 接続中の${PLATFORM}デバイスを検索中..."
         PLATFORM_PATTERN="ios"
         [[ "$PLATFORM" == "android" ]] && PLATFORM_PATTERN="^android"
-        DEVICE_ID="$(flutter devices 2>/dev/null | awk -F' • ' -v p="$PLATFORM_PATTERN" 'NF >= 3 && tolower($3) ~ p { print $2; exit }')"
+        # iOS シミュレータも種別が "ios" と出るので除外する（Release ビルドはシミュレータに入らない）
+        # flutter devices は列を空白で揃えて出すので、ID の前後の空白を落とす
+        DEVICE_ID="$(flutter devices 2>/dev/null | awk -F' • ' -v p="$PLATFORM_PATTERN" 'NF >= 3 && tolower($3) ~ p && $0 !~ /\(simulator\)/ { gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit }')"
         if [ -z "$DEVICE_ID" ]; then
-            echo "❌ ${PLATFORM}デバイスが見つかりません。接続・信頼設定を確認してください。"
+            echo "❌ ${PLATFORM}の実機が見つかりません。USB接続・「このコンピュータを信頼」・デベロッパモードを確認してください。"
+            [[ "$PLATFORM" == "ios" ]] && echo "   シミュレータで動かす場合は make ios-sim を使ってください。"
             flutter devices
             exit 1
         fi
@@ -70,6 +75,42 @@ if [[ "$1" == "--ios" || "$1" == "--android" ]]; then
     echo ""
     echo "✅ インストール完了（Release）。ホーム画面から起動できます。"
     echo "   ローカルAPIに繋ぐ場合: API_BASE_URL=http://<MacのLAN IP>:8000/v1/api make ios-install"
+    exit 0
+fi
+
+if [[ "$1" == "--ios-sim" ]]; then
+    FLUTTER_SDK_BIN="/Volumes/DevDisk/01_dev/12_flutter/99_sdk/flutter/bin"
+    if ! command -v flutter >/dev/null 2>&1; then
+        export PATH="$FLUTTER_SDK_BIN:$PATH"
+    fi
+
+    SIM="$2"
+    if [ -z "$SIM" ]; then
+        # 起動中のシミュレータがあればそれ、なければ使えるiPhoneの先頭
+        SIM="$(xcrun simctl list devices booted | grep -E 'iPhone' | head -1 | grep -oE '[0-9A-F-]{36}' || true)"
+        if [ -z "$SIM" ]; then
+            SIM="$(xcrun simctl list devices available | grep -E 'iPhone' | head -1 | grep -oE '[0-9A-F-]{36}' || true)"
+        fi
+    fi
+    if [ -z "$SIM" ]; then
+        echo "❌ iPhone シミュレータが見つかりません。Xcode でシミュレータを追加してください。"
+        exit 1
+    fi
+
+    # 名前指定でもUDID指定でも起動できる（起動済みならエラーは無視）
+    xcrun simctl boot "$SIM" 2>/dev/null || true
+    open -a Simulator
+    UDID="$(xcrun simctl list devices booted | grep -F "$SIM" | head -1 | grep -oE '[0-9A-F-]{36}' || true)"
+    UDID="${UDID:-$SIM}"
+
+    # シミュレータは Mac と同じネットワークなので localhost でローカルの Docker API に届く
+    API_BASE_URL="${API_BASE_URL:-http://localhost:8000/v1/api}"
+    echo "📱 Muybien Memo をシミュレータ(${UDID})で起動します（Debug・ホットリロード可）"
+    echo "🔗 API_BASE_URL=${API_BASE_URL}"
+    echo "   ローカルAPIは事前に make up で起動しておくこと"
+
+    cd "$PROJECT_ROOT/myapp-mobile"
+    flutter run -d "$UDID" --dart-define=API_BASE_URL="${API_BASE_URL}"
     exit 0
 fi
 

@@ -15,7 +15,7 @@ export type MenuKey =
 export const MENU_OPTIONS: { key: MenuKey; label: string }[] = [
   { key: 'contacts', label: 'お問い合わせ一覧' },
   { key: 'customers', label: '顧客管理' },
-  { key: 'tasks', label: 'タスク一覧' },
+  { key: 'tasks', label: 'タスク管理' },
   { key: 'diary', label: '日記' },
   { key: 'memo', label: 'メモ' },
   { key: 'reservations', label: '予約管理' },

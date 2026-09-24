@@ -38,8 +38,29 @@ class CustomerSerializer(serializers.ModelSerializer):
 class LabTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = LabTask
-        fields = ['id', 'title', 'description', 'status', 'due_date', 'created_at', 'updated_at']
+        fields = [
+            'id', 'title', 'description', 'status', 'priority', 'start_date', 'due_date',
+            'duration_days', 'progress', 'parent', 'order', 'dependencies', 'created_at', 'updated_at',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {'dependencies': {'required': False}}
+
+    def validate(self, attrs):
+        start = attrs.get('start_date', getattr(self.instance, 'start_date', None))
+        due = attrs.get('due_date', getattr(self.instance, 'due_date', None))
+        if start and due and due < start:
+            raise serializers.ValidationError({'due_date': '終了日は開始日以降にしてください。'})
+
+        if self.instance:
+            # 自分自身や子孫を親にすると循環するので弾く
+            node = attrs.get('parent')
+            while node:
+                if node.pk == self.instance.pk:
+                    raise serializers.ValidationError({'parent': '自分自身や子タスクを親にはできません。'})
+                node = node.parent
+            if any(dep.pk == self.instance.pk for dep in attrs.get('dependencies', [])):
+                raise serializers.ValidationError({'dependencies': '自分自身を先行タスクにはできません。'})
+        return attrs
 
 
 class DiaryEntrySerializer(serializers.ModelSerializer):

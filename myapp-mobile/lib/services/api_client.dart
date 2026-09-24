@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
+import '../navigation.dart';
+import '../screens/login_screen.dart';
 
 class ApiException implements Exception {
   final int statusCode;
@@ -88,10 +91,25 @@ class ApiClient {
     }
 
     var res = await send();
-    if (res.statusCode == 401 && await _refreshAccessToken()) {
-      res = await send();
+    if (res.statusCode == 401) {
+      if (await _refreshAccessToken()) {
+        res = await send();
+      } else {
+        await _forceLogout();
+      }
     }
     return res;
+  }
+
+  // アクセス・リフレッシュ両方のトークンが無効な場合、強制ログアウトしてログイン画面に戻す
+  Future<void> _forceLogout() async {
+    await logout();
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   Future<List<Map<String, dynamic>>> listMemos() async {
@@ -192,39 +210,26 @@ class ApiClient {
     return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
   }
 
-  Future<Map<String, dynamic>> createTask(
-    String title,
-    String description,
-    String status, {
-    DateTime? dueDate,
-  }) async {
-    final body = <String, dynamic>{
-      'title': title,
-      'description': description,
-      'status': status,
-      'due_date': dueDate != null ? _ymd(dueDate) : null,
-    };
-    final res = await _authedRequest('POST', '/lab/tasks', body: body);
+  Future<Map<String, dynamic>> getTask(int id) async {
+    final res = await _authedRequest('GET', '/lab/tasks/$id');
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'タスクの取得に失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// [fields] は API のフィールド名そのまま（日付は [ymd] で文字列、未設定は null）
+  Future<Map<String, dynamic>> createTask(Map<String, dynamic> fields) async {
+    final res = await _authedRequest('POST', '/lab/tasks', body: fields);
     if (res.statusCode != 201) {
       throw ApiException(res.statusCode, _errorMessage(res, 'タスクの作成に失敗しました'));
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updateTask(
-    int id,
-    String title,
-    String description,
-    String status, {
-    DateTime? dueDate,
-  }) async {
-    final body = <String, dynamic>{
-      'title': title,
-      'description': description,
-      'status': status,
-      'due_date': dueDate != null ? _ymd(dueDate) : null,
-    };
-    final res = await _authedRequest('PATCH', '/lab/tasks/$id', body: body);
+  /// 渡したフィールドだけを更新する（PATCH）
+  Future<Map<String, dynamic>> updateTask(int id, Map<String, dynamic> fields) async {
+    final res = await _authedRequest('PATCH', '/lab/tasks/$id', body: fields);
     if (res.statusCode != 200) {
       throw ApiException(res.statusCode, _errorMessage(res, 'タスクの更新に失敗しました'));
     }
@@ -237,6 +242,9 @@ class ApiClient {
       throw ApiException(res.statusCode, _errorMessage(res, 'タスクの削除に失敗しました'));
     }
   }
+
+  /// API に渡す日付文字列（YYYY-MM-DD）
+  String ymd(DateTime d) => _ymd(d);
 
   String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
