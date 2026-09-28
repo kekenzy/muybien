@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/note_item.dart';
 import '../services/api_client.dart';
+import 'photo_viewer.dart';
 
 class MemoEditScreen extends StatefulWidget {
   final NoteItem? note;
@@ -24,6 +28,10 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
   late DateTime _date;
   late NoteKind _kind;
   bool _saving = false;
+  final _picker = ImagePicker();
+  late List<DiaryPhoto> _photos;
+  final List<XFile> _pending = [];
+  final List<int> _removedPhotoIds = [];
 
   bool get _isEditing => widget.note != null;
 
@@ -34,6 +42,17 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
     _date = DateTime(base.year, base.month, base.day);
     // 新規は日記（Labカレンダーと共通）として保存。既存は種別を維持。
     _kind = widget.note?.kind ?? NoteKind.diary;
+    _photos = List<DiaryPhoto>.from(widget.note?.photos ?? const []);
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    final file = await _picker.pickImage(
+      source: source,
+      imageQuality: 72,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
+    if (file != null) setState(() => _pending.add(file));
   }
 
   String get _dateLabel =>
@@ -54,18 +73,30 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
     try {
       final title = _kind == NoteKind.diary ? '' : _titleController.text;
       final content = _contentController.text;
+      int? diaryId;
       if (_isEditing) {
         final id = widget.note!.id;
         if (_kind == NoteKind.diary) {
           await ApiClient.instance.updateDiary(id, title, content, _date);
+          diaryId = id;
         } else {
           await ApiClient.instance.updateMemo(id, title, content, date: _date);
         }
       } else {
         if (_kind == NoteKind.diary) {
-          await ApiClient.instance.createDiary(title, content, _date);
+          final created = await ApiClient.instance.createDiary(title, content, _date);
+          diaryId = created['id'] as int;
         } else {
           await ApiClient.instance.createMemo(title, content, date: _date);
+        }
+      }
+      if (diaryId != null) {
+        for (final photoId in _removedPhotoIds) {
+          await ApiClient.instance.deleteDiaryPhoto(diaryId, photoId);
+        }
+        for (final file in _pending) {
+          final bytes = await file.readAsBytes();
+          await ApiClient.instance.uploadDiaryPhoto(diaryId, bytes, file.name);
         }
       }
       if (mounted) Navigator.of(context).pop(true);
@@ -153,6 +184,92 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
     );
   }
 
+  void _openViewer(ImageProvider image) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => PhotoViewer(image: image)),
+    );
+  }
+
+  Widget _photoCell({
+    required ImageProvider image,
+    required VoidCallback onRemove,
+  }) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        GestureDetector(
+          onTap: () => _openViewer(image),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image(image: image, fit: BoxFit.cover),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: onRemove,
+            icon: const Icon(Icons.close, size: 16, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotos() {
+    final kept = _photos.where((photo) => !_removedPhotoIds.contains(photo.id)).toList();
+    Widget pendingCell(int index) {
+      return _photoCell(
+        image: FileImage(File(_pending[index].path)),
+        onRemove: () => setState(() => _pending.removeAt(index)),
+      );
+    }
+
+    final cells = <Widget>[
+      for (final photo in kept)
+        _photoCell(
+          image: NetworkImage(photo.url),
+          onRemove: () => setState(() => _removedPhotoIds.add(photo.id)),
+        ),
+      for (var i = 0; i < _pending.length; i++) pendingCell(i),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (cells.isNotEmpty)
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+            children: cells,
+          ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _saving ? null : () => _pickPhoto(ImageSource.camera),
+                icon: const Icon(Icons.photo_camera_outlined, size: 16),
+                label: const Text('カメラ', style: TextStyle(fontSize: 13)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _saving ? null : () => _pickPhoto(ImageSource.gallery),
+                icon: const Icon(Icons.photo_library_outlined, size: 16),
+                label: const Text('ファイル', style: TextStyle(fontSize: 13)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildKindSelector() {
     return Row(
       children: [
@@ -200,6 +317,7 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
             Expanded(
               child: TextField(
                 controller: _contentController,
+                autofocus: _kind == NoteKind.diary,
                 style: const TextStyle(fontSize: 14),
                 decoration: const InputDecoration(labelText: '本文', border: OutlineInputBorder(), isDense: true),
                 expands: true,
@@ -207,6 +325,13 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
                 textAlignVertical: TextAlignVertical.top,
               ),
             ),
+            if (_kind == NoteKind.diary) ...[
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 168),
+                child: SingleChildScrollView(child: _buildPhotos()),
+              ),
+            ],
             const SizedBox(height: 12),
             FilledButton(
               style: FilledButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(vertical: 10)),

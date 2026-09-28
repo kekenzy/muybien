@@ -133,6 +133,17 @@ Django は SMTP クライアントとして SES に接続し、お問い合わ�
 > **重要**: `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` は **IAM の通常アクセスキー（コンソールログイン用）とは別物** です。  
 > AWS SES コンソールの「SMTP 認証情報を作成」から発行する **SES 専用の SMTP 資格情報** を `.env.prod` に設定します。
 
+### 日記の写真（S3）
+
+未設定のあいだはサーバー内の `/media/` に保存します。設定後の新規写真は非公開 S3 に入り、7 日間の署名付き URL で表示します。手順は [DIARY_PHOTOS.md](DIARY_PHOTOS.md)。
+
+| 変数名 | 説明 | 設定例 |
+|--------|------|--------|
+| `AWS_S3_DIARY_BUCKET` | 日記写真用バケット。空ならサーバー内 media | `muybien-diary-photos` |
+| `AWS_S3_REGION` | バケットのリージョン | `ap-northeast-1` |
+
+Lightsail のインスタンスロールでは通常の S3 に書けません。`diary/*` だけを許可した IAM ユーザーのアクセスキーを `.env.prod` に置きます。手順は [DIARY_PHOTOS.md](DIARY_PHOTOS.md)。
+
 ---
 
 #### SES 設定の全体像
@@ -437,6 +448,9 @@ EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=noreply@muybien.jp
 CONTACT_NOTIFY_EMAIL=kenji.nagai@globalway.co.jp
 
+AWS_S3_DIARY_BUCKET=（日記写真用バケット。空ならサーバー内 media）
+AWS_S3_REGION=ap-northeast-1
+
 STRIPE_SECRET_KEY=sk_live_（Stripeダッシュボードで発行）
 STRIPE_PUBLISHABLE_KEY=pk_live_（Stripeダッシュボードで発行）
 ```
@@ -457,3 +471,4 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_live_（Stripeダッシュボードで発行）
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Lightsail デプロイ |
 | [SSL_SETUP.md](SSL_SETUP.md) | HTTPS |
 | [LIGHTSAIL_NETWORK_SETUP.md](LIGHTSAIL_NETWORK_SETUP.md) | ネットワーク |
+| [DIARY_PHOTOS.md](DIARY_PHOTOS.md) | 日記写真の S3 とアプリ手順 |

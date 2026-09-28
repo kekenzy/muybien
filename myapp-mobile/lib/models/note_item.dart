@@ -1,5 +1,16 @@
 enum NoteKind { memo, diary, task }
 
+class DiaryPhoto {
+  final int id;
+  final String url;
+
+  DiaryPhoto({required this.id, required this.url});
+
+  factory DiaryPhoto.fromJson(Map<String, dynamic> json) {
+    return DiaryPhoto(id: json['id'] as int, url: json['url'] as String);
+  }
+}
+
 /// Labのメモ / 日記 / タスク（期限日あり）を一覧・カレンダーでまとめて扱う
 class NoteItem {
   final NoteKind kind;
@@ -8,6 +19,7 @@ class NoteItem {
   final String title;
   final String content;
   final String? status;
+  final List<DiaryPhoto> photos;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -18,6 +30,7 @@ class NoteItem {
     required this.title,
     required this.content,
     this.status,
+    this.photos = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -58,6 +71,9 @@ class NoteItem {
       date: DateTime(date.year, date.month, date.day),
       title: (json['title'] as String?) ?? '',
       content: (json['content'] as String?) ?? '',
+      photos: ((json['photos'] as List?) ?? [])
+          .map((item) => DiaryPhoto.fromJson(item as Map<String, dynamic>))
+          .toList(),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );

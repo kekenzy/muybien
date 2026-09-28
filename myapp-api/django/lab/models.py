@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 # 権限管理の対象メニュー一覧。新しいLabメニューを追加する場合はここにも追加すること。
 MENU_CHOICES = [
@@ -171,6 +173,32 @@ class DiaryEntry(models.Model):
 
     def __str__(self):
         return f'{self.date}'
+
+
+class DiaryPhoto(models.Model):
+    diary = models.ForeignKey(
+        DiaryEntry,
+        verbose_name='日記',
+        related_name='photos',
+        on_delete=models.CASCADE,
+    )
+    storage_key = models.CharField('保存キー', max_length=255)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+
+    class Meta:
+        verbose_name = '日記の写真'
+        verbose_name_plural = '日記の写真'
+        ordering = ['id']
+
+    def __str__(self):
+        return self.storage_key
+
+
+@receiver(pre_delete, sender=DiaryPhoto)
+def _remove_diary_photo_file(sender, instance, **kwargs):
+    from .storage import delete_bytes
+
+    delete_bytes(instance.storage_key)
 
 
 class Memo(models.Model):

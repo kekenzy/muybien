@@ -33,7 +33,13 @@
         @click="selectDay(day.iso)"
       >
         <span class="text-xs">{{ day.date.getDate() }}</span>
-        <span v-if="day.diary" class="w-full truncate text-[10px] text-primary">
+        <img
+          v-if="day.diary?.photos?.length"
+          :src="day.diary.photos[0].url"
+          alt=""
+          class="mt-0.5 h-8 w-full rounded object-cover"
+        />
+        <span v-else-if="day.diary" class="w-full truncate text-[10px] text-primary">
           📔 {{ day.diary.title || day.diary.content }}
         </span>
         <span v-for="task in day.tasks.slice(0, 2)" :key="task.id" class="w-full truncate text-[10px] text-yellow-400">
@@ -72,10 +78,55 @@
           <label class="block text-xs text-white/60 mb-1">本文</label>
           <textarea
             v-model="form.content"
-            rows="12"
+            rows="8"
             :disabled="!canWrite('diary')"
             class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm focus:outline-none focus:border-primary/60 disabled:opacity-50"
           />
+        </div>
+
+        <div>
+          <label class="block text-xs text-white/60 mb-2">写真</label>
+          <div class="flex flex-wrap gap-2 mb-3">
+            <button
+              v-for="photo in keptPhotos"
+              :key="photo.id"
+              type="button"
+              class="relative h-20 w-20"
+              :disabled="!canWrite('diary')"
+              @click="removedPhotoIds.push(photo.id)"
+            >
+              <img :src="photo.url" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
+              <span v-if="canWrite('diary')" class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 rounded px-1">削除</span>
+            </button>
+            <button
+              v-for="(file, index) in pendingFiles"
+              :key="file.name + index"
+              type="button"
+              class="relative h-20 w-20"
+              @click="removePending(index)"
+            >
+              <img :src="pendingUrls[index]" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
+              <span class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 rounded px-1">取消</span>
+            </button>
+          </div>
+          <div v-if="canWrite('diary')" class="flex flex-wrap gap-2">
+            <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40" @click="cameraInput?.click()">
+              カメラ
+            </button>
+            <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40" @click="fileInput?.click()">
+              ファイルを選択
+            </button>
+            <button
+              v-if="keptPhotos.length || pendingFiles.length"
+              type="button"
+              class="text-xs px-3 py-1.5 rounded-full border border-white/20 text-white/60 hover:text-white"
+              @click="clearPendingPhotos"
+            >
+              追加分を取り消す
+            </button>
+          </div>
+          <input ref="cameraInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onPickPhotos" />
+          <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="onPickPhotos" />
         </div>
 
         <div class="flex items-center justify-between pt-2">
@@ -92,7 +143,7 @@
             v-if="canWrite('diary')"
             type="button"
             class="text-sm px-4 py-2 rounded-full bg-primary text-black font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-            :disabled="!form.content || saving"
+            :disabled="(!form.content && !keptPhotos.length && !pendingFiles.length) || saving"
             @click="saveDiary"
           >
             {{ selectedDiary ? '更新する' : '保存する' }}
@@ -108,10 +159,13 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   createDiary,
   deleteDiary,
+  deleteDiaryPhoto,
   fetchDiaries,
   fetchTasks,
   updateDiary,
+  uploadDiaryPhoto,
   type DiaryEntry,
+  type DiaryPhoto,
   type LabTask,
 } from '../../lib/api'
 import { canWrite } from '../../lib/permissions'
@@ -131,6 +185,15 @@ const selectedDate = ref<string>(toIso(today))
 const showDialog = ref(false)
 
 const form = reactive({ title: '', content: '' })
+const cameraInput = ref<HTMLInputElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const pendingFiles = ref<File[]>([])
+const pendingUrls = ref<string[]>([])
+const removedPhotoIds = ref<number[]>([])
+
+const keptPhotos = computed<DiaryPhoto[]>(() =>
+  (selectedDiary.value?.photos ?? []).filter((photo) => !removedPhotoIds.value.includes(photo.id)),
+)
 
 interface CalendarDay {
   date: Date
@@ -183,9 +246,59 @@ function dayStyle(day: CalendarDay): string {
   return classes.join(' ')
 }
 
+function clearPendingPhotos() {
+  pendingUrls.value.forEach((url) => URL.revokeObjectURL(url))
+  pendingFiles.value = []
+  pendingUrls.value = []
+}
+
 function applySelectedToForm() {
   form.title = selectedDiary.value?.title ?? ''
   form.content = selectedDiary.value?.content ?? ''
+  clearPendingPhotos()
+  removedPhotoIds.value = []
+}
+
+function removePending(index: number) {
+  URL.revokeObjectURL(pendingUrls.value[index])
+  pendingFiles.value.splice(index, 1)
+  pendingUrls.value.splice(index, 1)
+}
+
+async function compressImage(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const maxEdge = 1600
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
+    const width = Math.max(1, Math.round(bitmap.width * scale))
+    const height = Math.max(1, Math.round(bitmap.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(bitmap, 0, 0, width, height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.72)
+    })
+    if (!blob) return file
+    const name = file.name.replace(/\.[^.]+$/, '') || 'photo'
+    return new File([blob], `${name}.jpg`, { type: 'image/jpeg' })
+  } catch {
+    return file
+  }
+}
+
+async function onPickPhotos(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  for (const file of files) {
+    const compressed = await compressImage(file)
+    pendingFiles.value.push(compressed)
+    pendingUrls.value.push(URL.createObjectURL(compressed))
+  }
 }
 
 function selectDay(iso: string) {
@@ -233,22 +346,27 @@ async function saveDiary() {
   saving.value = true
   errorMsg.value = ''
   try {
+    let entry: DiaryEntry
     if (selectedDiary.value) {
-      const updated = await updateDiary(selectedDiary.value.id, {
+      entry = await updateDiary(selectedDiary.value.id, {
         date: selectedDate.value,
         title: form.title,
         content: form.content,
       })
-      const idx = diaries.value.findIndex((d) => d.id === updated.id)
-      if (idx !== -1) diaries.value[idx] = updated
     } else {
-      const created = await createDiary({
+      entry = await createDiary({
         date: selectedDate.value,
         title: form.title,
         content: form.content,
       })
-      diaries.value.push(created)
     }
+    for (const photoId of removedPhotoIds.value) {
+      await deleteDiaryPhoto(entry.id, photoId)
+    }
+    for (const file of pendingFiles.value) {
+      await uploadDiaryPhoto(entry.id, file)
+    }
+    await loadCalendarData()
     showDialog.value = false
   } catch {
     errorMsg.value = '保存に失敗しました。'

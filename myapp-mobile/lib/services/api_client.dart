@@ -202,6 +202,36 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> uploadDiaryPhoto(int diaryId, List<int> bytes, String filename) async {
+    Future<http.Response> send() async {
+      final access = await _storage.read(key: _accessKey);
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$apiBaseUrl/lab/diaries/$diaryId/photos'),
+      );
+      if (access != null) request.headers['Authorization'] = 'Bearer $access';
+      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      final streamed = await request.send();
+      return http.Response.fromStream(streamed);
+    }
+
+    var res = await send();
+    if (res.statusCode == 401 && await _refreshAccessToken()) {
+      res = await send();
+    }
+    if (res.statusCode != 201) {
+      throw ApiException(res.statusCode, _errorMessage(res, '写真のアップロードに失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<void> deleteDiaryPhoto(int diaryId, int photoId) async {
+    final res = await _authedRequest('DELETE', '/lab/diaries/$diaryId/photos/$photoId');
+    if (res.statusCode != 204) {
+      throw ApiException(res.statusCode, _errorMessage(res, '写真の削除に失敗しました'));
+    }
+  }
+
   Future<List<Map<String, dynamic>>> listTasks() async {
     final res = await _authedRequest('GET', '/lab/tasks');
     if (res.statusCode != 200) {

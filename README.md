@@ -12,6 +12,7 @@ Django REST API + Vue 3 SPA 構成。**スタイルは Tailwind CSS 4**（ユー
 | [DEPLOYMENT.md](DEPLOYMENT.md) | AWS Lightsail デプロイ手順 |
 | [SSL_SETUP.md](SSL_SETUP.md) | Let's Encrypt 等の SSL |
 | [LIGHTSAIL_NETWORK_SETUP.md](LIGHTSAIL_NETWORK_SETUP.md) | Lightsail ネットワーク設定 |
+| [DIARY_PHOTOS.md](DIARY_PHOTOS.md) | 日記写真の S3 設定と Web・スマホの操作 |
 
 ---
 

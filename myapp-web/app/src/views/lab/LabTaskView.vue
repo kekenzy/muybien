@@ -5,14 +5,20 @@
         <h2 class="text-xl font-bold">タスク管理</h2>
         <p class="text-sm text-white/60 mt-1">ToDoはカンバンでステータス管理、WBSは階層とガントチャートで日程管理する（同じタスクを別の見せ方で表示）</p>
       </div>
-      <button
-        v-if="canWrite('tasks')"
-        type="button"
-        class="shrink-0 text-sm px-4 py-2 rounded-full bg-primary text-black font-medium hover:opacity-90 transition-opacity"
-        @click="openCreate()"
-      >
-        + 新規タスク
-      </button>
+      <div class="flex items-center gap-4 shrink-0">
+        <label class="flex items-center gap-2 text-sm text-white/70">
+          <input v-model="showClosed" type="checkbox" class="accent-primary" />
+          完了を表示
+        </label>
+        <button
+          v-if="canWrite('tasks')"
+          type="button"
+          class="text-sm px-4 py-2 rounded-full bg-primary text-black font-medium hover:opacity-90 transition-opacity"
+          @click="openCreate()"
+        >
+          + 新規タスク
+        </button>
+      </div>
     </div>
 
     <div v-if="errorMsg" class="mb-6 bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl p-4 text-sm">
@@ -46,10 +52,6 @@
         <option value="all">優先度: すべて</option>
         <option v-for="opt in PRIORITY_OPTIONS" :key="opt.value" :value="opt.value">優先度: {{ opt.label }}</option>
       </select>
-      <label class="flex items-center gap-2 text-sm text-white/70">
-        <input v-model="showClosed" type="checkbox" class="accent-primary" />
-        完了・中止も表示
-      </label>
     </div>
 
     <div v-if="loading" class="text-center text-white/60 py-20 text-sm">読み込み中...</div>
@@ -130,7 +132,7 @@ const errorMsg = ref('')
 
 const searchQuery = ref('')
 const priorityFilter = ref<'all' | TaskPriority>('all')
-const showClosed = ref(true)
+const showClosed = ref(false)
 
 const showForm = ref(false)
 const editingTask = ref<LabTask | null>(null)

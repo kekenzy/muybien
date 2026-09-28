@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/note_item.dart';
 import 'memo_edit_screen.dart';
+import 'photo_viewer.dart';
 
 /// メモ・日記の閲覧画面。右上の鉛筆アイコンから編集画面へ遷移する。
 class NoteDetailScreen extends StatefulWidget {
@@ -25,6 +26,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   String get _dateLabel {
     final d = _note.date;
     return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  }
+
+  void _openPhoto(String url) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PhotoViewer(image: NetworkImage(url)),
+      ),
+    );
   }
 
   Future<void> _edit() async {
@@ -76,10 +85,43 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               ),
               const SizedBox(height: 10),
             ],
-            SelectableText(
-              _note.content.isEmpty ? '(本文なし)' : _note.content,
-              style: const TextStyle(fontSize: 14, height: 1.4),
+            GestureDetector(
+              onTap: _note.kind == NoteKind.diary ? _edit : null,
+              child: Text(
+                _note.content.isEmpty ? '(本文なし)' : _note.content,
+                style: const TextStyle(fontSize: 14, height: 1.4),
+              ),
             ),
+            if (_note.photos.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _note.photos.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 6,
+                  mainAxisSpacing: 6,
+                ),
+                itemBuilder: (context, index) {
+                  final photo = _note.photos[index];
+                  return GestureDetector(
+                    onTap: () => _openPhoto(photo.url),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        photo.url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const ColoredBox(
+                          color: Color(0x11000000),
+                          child: Center(child: Icon(Icons.broken_image_outlined)),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),

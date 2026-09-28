@@ -1,7 +1,12 @@
+import io
+import uuid
+
 from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from PIL import Image, ImageOps
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from portal.models import Appointment, AvailabilityRule, ReservationSettings
@@ -12,23 +17,33 @@ from portal.serializers import (
 )
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .invitations import resend_invite_email, send_invite_email
-from .models import Customer, DiaryEntry, LabTask, Memo, Role, RoleMenuPermission, UserProfile
+from .models import Customer, DiaryEntry, DiaryPhoto, LabTask, Memo, Role, RoleMenuPermission, UserProfile
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
     ContactAdminSerializer,
     CustomerSerializer,
     DiaryEntrySerializer,
+    DiaryPhotoSerializer,
     LabTaskSerializer,
     MemoSerializer,
     RoleSerializer,
     UserAdminSerializer,
 )
+from .storage import save_bytes
+
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+except ImportError:
+    pass
 
 User = get_user_model()
 
@@ -224,7 +239,7 @@ class DiaryListCreateView(generics.ListCreateAPIView):
     serializer_class = DiaryEntrySerializer
 
     def get_queryset(self):
-        queryset = DiaryEntry.objects.all()
+        queryset = DiaryEntry.objects.prefetch_related('photos')
         year = self.request.query_params.get('year')
         month = self.request.query_params.get('month')
         if year:
@@ -238,7 +253,51 @@ class DiaryDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'diary'
     serializer_class = DiaryEntrySerializer
-    queryset = DiaryEntry.objects.all()
+    queryset = DiaryEntry.objects.prefetch_related('photos')
+
+
+def _jpeg_bytes(uploaded):
+    image = ImageOps.exif_transpose(Image.open(uploaded))
+    image = image.convert('RGB')
+    image.thumbnail((1600, 1600))
+    buf = io.BytesIO()
+    image.save(buf, format='JPEG', quality=72, optimize=True)
+    return buf.getvalue()
+
+
+class DiaryPhotoUploadView(APIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'diary'
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        diary = get_object_or_404(DiaryEntry, pk=pk)
+        uploaded = request.FILES.get('file')
+        if uploaded is None:
+            return Response({'detail': 'file が必要です'}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded.size > 20 * 1024 * 1024:
+            return Response({'detail': '20MB以下の画像にしてください'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            data = _jpeg_bytes(uploaded)
+        except Exception:
+            return Response({'detail': '画像として読み込めませんでした'}, status=status.HTTP_400_BAD_REQUEST)
+        key = f'diary/{diary.pk}/{uuid.uuid4().hex}.jpg'
+        save_bytes(key, data, 'image/jpeg')
+        photo = DiaryPhoto.objects.create(diary=diary, storage_key=key)
+        return Response(
+            DiaryPhotoSerializer(photo, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class DiaryPhotoDetailView(APIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'diary'
+
+    def delete(self, request, pk, photo_id):
+        photo = get_object_or_404(DiaryPhoto, pk=photo_id, diary_id=pk)
+        photo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MemoListCreateView(generics.ListCreateAPIView):

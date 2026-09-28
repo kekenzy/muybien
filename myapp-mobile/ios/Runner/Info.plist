@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>日記に写真を添付するためにカメラを使います。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>日記に添付する写真を選ぶためにフォトライブラリを使います。</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>デバッグ実行時にXcode/Flutterツールと通信するために使用します。</string>
 	<key>NSBonjourServices</key>

@@ -28,6 +28,8 @@ API_BASE_URL=http://192.168.x.x:8000/v1/api make ios-install
 
 初回は「設定 > 一般 > VPNとデバイス管理」で開発元を信頼すること。
 
+日記の編集画面（種別が日記のとき）からカメラまたはファイルで写真を添付できます。S3 への切り替えと Web 側の操作は [DIARY_PHOTOS.md](../DIARY_PHOTOS.md)。
+
 ## 注意点
 
 - **Android の HTTP通信**: ローカル開発でAPIをhttp（TLSなし）で叩くため、`android/app/src/debug/AndroidManifest.xml` に `android:usesCleartextTraffic="true"` を設定済み（debugビルドのみ有効、本番releaseには影響しない）。

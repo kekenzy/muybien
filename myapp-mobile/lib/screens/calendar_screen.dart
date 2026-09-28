@@ -90,6 +90,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       changed = await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => TaskEditScreen(task: task)),
       );
+    } else if (note.kind == NoteKind.diary) {
+      changed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => MemoEditScreen(note: note)),
+      );
     } else {
       changed = await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => NoteDetailScreen(note: note)),
@@ -392,11 +396,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 )
               else
                 Expanded(
-                  child: Text(
-                    note.content.isEmpty ? '(本文なし)' : note.content,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    children: [
+                      if (note.photos.isNotEmpty) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(note.photos.first.url, width: 28, height: 28, fit: BoxFit.cover),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          note.content.isEmpty ? '(本文なし)' : note.content,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               const Icon(Icons.chevron_right, size: 18),

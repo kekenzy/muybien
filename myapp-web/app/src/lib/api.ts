@@ -142,11 +142,18 @@ export interface LabTaskInput {
   dependencies: number[]
 }
 
+export interface DiaryPhoto {
+  id: number
+  url: string
+  created_at: string
+}
+
 export interface DiaryEntry {
   id: number
   date: string
   title: string
   content: string
+  photos: DiaryPhoto[]
   created_at: string
   updated_at: string
 }
@@ -193,6 +200,17 @@ export async function updateDiary(id: number, input: DiaryEntryInput): Promise<D
 
 export async function deleteDiary(id: number): Promise<void> {
   await api.delete(`/lab/diaries/${id}`)
+}
+
+export async function uploadDiaryPhoto(diaryId: number, file: File): Promise<DiaryPhoto> {
+  const body = new FormData()
+  body.append('file', file)
+  const { data } = await api.post<DiaryPhoto>(`/lab/diaries/${diaryId}/photos`, body)
+  return data
+}
+
+export async function deleteDiaryPhoto(diaryId: number, photoId: number): Promise<void> {
+  await api.delete(`/lab/diaries/${diaryId}/photos/${photoId}`)
 }
 
 export interface Customer {

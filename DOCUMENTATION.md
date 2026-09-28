@@ -26,6 +26,7 @@
 | [DEPLOYMENT.md](DEPLOYMENT.md) | AWS Lightsail デプロイ、SSH 設定、初回セットアップ |
 | [SSL_SETUP.md](SSL_SETUP.md) | Let's Encrypt 前提条件と証明書取得手順 |
 | [LIGHTSAIL_NETWORK_SETUP.md](LIGHTSAIL_NETWORK_SETUP.md) | Lightsail のファイアウォール・ポート・DNS |
+| [DIARY_PHOTOS.md](DIARY_PHOTOS.md) | 日記写真の S3 設定と Web・スマホでの付け方 |
 | [CLAUDE.md](CLAUDE.md) | AI 開発者向けの簡易リファレンス |
 
 ---
@@ -38,6 +39,7 @@
 - **環境変数・SES・migrate**: [PRODUCTION.md](PRODUCTION.md)
 - HTTPS: [SSL_SETUP.md](SSL_SETUP.md)
 - ネットワーク: [LIGHTSAIL_NETWORK_SETUP.md](LIGHTSAIL_NETWORK_SETUP.md)
+- 日記の写真（S3・Web・スマホ）: [DIARY_PHOTOS.md](DIARY_PHOTOS.md)
 
 ### 開発
 

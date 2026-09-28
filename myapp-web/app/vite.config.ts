@@ -12,8 +12,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/v1/api': { target: 'http://myapp-api:8000', changeOrigin: true },
-      '/media': { target: 'http://myapp-api:8000', changeOrigin: true },
+      // changeOrigin すると Host がコンテナ名になり、日記写真の URL がブラウザから開けなくなる
+      '/v1/api': { target: 'http://myapp-api:8000', changeOrigin: false },
+      '/media': { target: 'http://myapp-api:8000', changeOrigin: false },
     },
   },
 })

@@ -18,7 +18,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
   List<Task>? _tasks;
   String? _error;
   _ViewMode _mode = _ViewMode.todo;
-  bool _showClosed = true;
+  bool _showClosed = false;
+  Task? _dragging;
   final Set<int> _collapsed = {};
 
   @override
@@ -42,6 +43,25 @@ class _TaskListScreenState extends State<TaskListScreen> {
       MaterialPageRoute(builder: (_) => TaskEditScreen(task: task, initialParentId: parentId)),
     );
     if (changed == true) _load();
+  }
+
+  Future<void> _moveStatus(Task task, TaskStatus status) async {
+    if (task.status == status) return;
+    try {
+      await ApiClient.instance.updateTask(
+        task.id,
+        status == TaskStatus.done
+            ? {'status': status.apiValue, 'progress': 100}
+            : {'status': status.apiValue},
+      );
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('更新に失敗しました: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _toggleDone(Task task) async {
@@ -121,10 +141,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
       appBar: AppBar(
         title: const Text('タスク管理'),
         actions: [
-          IconButton(
-            tooltip: _showClosed ? '完了・中止を隠す' : '完了・中止も表示',
-            icon: Icon(_showClosed ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-            onPressed: () => setState(() => _showClosed = !_showClosed),
+          const Text('完了', style: TextStyle(fontSize: 12)),
+          Checkbox(
+            value: _showClosed,
+            onChanged: (value) => setState(() => _showClosed = value ?? false),
           ),
         ],
         bottom: PreferredSize(
@@ -182,35 +202,65 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
   // ---- ToDo（ステータス別） ----
 
+  bool _statusVisible(TaskStatus status) {
+    if (_showClosed || _dragging != null) return true;
+    return status != TaskStatus.done && status != TaskStatus.cancelled;
+  }
+
   Widget _buildTodo(List<Task> tasks) {
     final titleById = {for (final t in _tasks!) t.id: t.title};
-    final children = <Widget>[];
-    for (final status in TaskStatus.values) {
-      final group = tasks.where((t) => t.status == status).toList()..sort(_compareTasks);
-      if (group.isEmpty) continue;
-      children.add(Padding(
-        padding: const EdgeInsets.fromLTRB(6, 10, 6, 4),
-        child: Row(
-          children: [
-            Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(status), shape: BoxShape.circle)),
-            const SizedBox(width: 6),
-            Text(status.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(width: 6),
-            Text('${group.length}', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ],
-        ),
-      ));
-      for (final task in group) {
-        children.add(Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: _buildTodoCard(task, task.parentId != null ? titleById[task.parentId] : null),
-        ));
-      }
-    }
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(10, 0, 10, 80),
-      children: children,
+      children: [
+        for (final status in TaskStatus.values)
+          if (_statusVisible(status)) _buildStatusDrop(status, tasks, titleById),
+      ],
+    );
+  }
+
+  Widget _buildStatusDrop(TaskStatus status, List<Task> tasks, Map<int, String> titleById) {
+    final group = tasks.where((t) => t.status == status).toList()..sort(_compareTasks);
+    return DragTarget<Task>(
+      onWillAcceptWithDetails: (details) => details.data.status != status,
+      onAcceptWithDetails: (details) => _moveStatus(details.data, status),
+      builder: (context, candidate, rejected) {
+        final hovering = candidate.isNotEmpty;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              margin: const EdgeInsets.fromLTRB(0, 10, 0, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: hovering ? _statusColor(status).withValues(alpha: 0.15) : null,
+                borderRadius: BorderRadius.circular(8),
+                border: hovering ? Border.all(color: _statusColor(status)) : null,
+              ),
+              child: Row(
+                children: [
+                  Container(width: 8, height: 8, decoration: BoxDecoration(color: _statusColor(status), shape: BoxShape.circle)),
+                  const SizedBox(width: 6),
+                  Text(status.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 6),
+                  Text('${group.length}', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  if (hovering) ...[
+                    const Spacer(),
+                    Text('ここに移動', style: TextStyle(fontSize: 11, color: _statusColor(status))),
+                  ],
+                ],
+              ),
+            ),
+            for (final task in group)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTodoCard(task, task.parentId != null ? titleById[task.parentId] : null),
+              ),
+            if (group.isEmpty)
+              const SizedBox(height: 28),
+          ],
+        );
+      },
     );
   }
 
@@ -235,7 +285,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   Widget _buildTodoCard(Task task, String? parentTitle) {
     final done = task.status == TaskStatus.done;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    return _card(
+    final card = _card(
       onTap: () => _openEditor(task: task),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -294,6 +344,20 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ],
         ),
       ),
+    );
+    return LongPressDraggable<Task>(
+      data: task,
+      onDragStarted: () => setState(() => _dragging = task),
+      onDragEnd: (_) => setState(() => _dragging = null),
+      feedback: Material(
+        color: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: card,
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.35, child: card),
+      child: card,
     );
   }
 

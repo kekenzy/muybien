@@ -56,8 +56,11 @@ class _MemoListScreenState extends State<MemoListScreen> {
   }
 
   Future<void> _openDetail(NoteItem note) async {
+    final page = note.kind == NoteKind.diary
+        ? MemoEditScreen(note: note)
+        : NoteDetailScreen(note: note);
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => NoteDetailScreen(note: note)),
+      MaterialPageRoute(builder: (_) => page),
     );
     if (changed == true) _load();
   }
@@ -162,6 +165,19 @@ class _MemoListScreenState extends State<MemoListScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  if (note.photos.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        note.photos.first.url,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox(width: 48, height: 48),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
