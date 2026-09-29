@@ -1,8 +1,10 @@
+import re
+
 from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Customer, DiaryEntry, DiaryPhoto, LabTask, Memo, Role, RoleMenuPermission
+from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, Role, RoleMenuPermission
 from .storage import photo_url
 
 User = get_user_model()
@@ -91,6 +93,30 @@ class MemoSerializer(serializers.ModelSerializer):
         model = Memo
         fields = ['id', 'date', 'title', 'content', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class DailyItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyItem
+        fields = ['id', 'title', 'color', 'mark', 'order', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate_color(self, value):
+        if not re.fullmatch(r'#[0-9a-fA-F]{6}', value):
+            raise serializers.ValidationError('色は #RRGGBB 形式で指定してください。')
+        return value.lower()
+
+
+class DailyCheckSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyCheck
+        fields = ['id', 'item', 'date']
+        read_only_fields = ['id']
+
+
+class DailyCheckToggleSerializer(serializers.Serializer):
+    item = serializers.PrimaryKeyRelatedField(queryset=DailyItem.objects.all())
+    date = serializers.DateField()
 
 
 class UserAdminSerializer(serializers.ModelSerializer):

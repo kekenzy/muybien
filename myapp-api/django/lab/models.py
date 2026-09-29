@@ -13,6 +13,7 @@ MENU_CHOICES = [
     ('tasks', 'タスク管理'),
     ('diary', '日記'),
     ('memo', 'メモ'),
+    ('daily', 'Daily'),
     ('reservations', '予約管理'),
     ('users', 'ユーザー管理'),
     ('roles', '権限管理'),
@@ -215,3 +216,47 @@ class Memo(models.Model):
 
     def __str__(self):
         return self.title or f'メモ #{self.pk}'
+
+
+class DailyItem(models.Model):
+    """毎日やること。無効化した項目はカレンダーに出さないが、過去のチェック記録は残す。"""
+
+    MARK_CHOICES = [
+        ('star', '★'),
+        ('circle', '●'),
+        ('heart', '♥'),
+        ('diamond', '◆'),
+        ('triangle', '▲'),
+        ('check', '✔'),
+    ]
+
+    title = models.CharField('タイトル', max_length=100)
+    color = models.CharField('色', max_length=7, default='#facc15')
+    mark = models.CharField('印', max_length=10, choices=MARK_CHOICES, default='star')
+    order = models.PositiveIntegerField('表示順', default=0)
+    is_active = models.BooleanField('有効', default=True)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Daily項目'
+        verbose_name_plural = 'Daily項目'
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return self.title
+
+
+class DailyCheck(models.Model):
+    item = models.ForeignKey(DailyItem, verbose_name='項目', related_name='checks', on_delete=models.CASCADE)
+    date = models.DateField('日付', db_index=True)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Dailyチェック'
+        verbose_name_plural = 'Dailyチェック'
+        unique_together = ('item', 'date')
+        ordering = ['date', 'item']
+
+    def __str__(self):
+        return f'{self.date} / {self.item.title}'

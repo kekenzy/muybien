@@ -213,6 +213,59 @@ export async function deleteDiaryPhoto(diaryId: number, photoId: number): Promis
   await api.delete(`/lab/diaries/${diaryId}/photos/${photoId}`)
 }
 
+export type DailyMark = 'star' | 'circle' | 'heart' | 'diamond' | 'triangle' | 'check'
+
+export interface DailyItem {
+  id: number
+  title: string
+  color: string
+  mark: DailyMark
+  order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type DailyItemInput = Pick<DailyItem, 'title' | 'color' | 'mark' | 'order' | 'is_active'>
+
+export interface DailyCheck {
+  id: number
+  item: number
+  date: string
+}
+
+export async function fetchDailyItems(): Promise<DailyItem[]> {
+  const { data } = await api.get<DailyItem[]>('/lab/daily-items')
+  return data
+}
+
+export async function createDailyItem(input: DailyItemInput): Promise<DailyItem> {
+  const { data } = await api.post<DailyItem>('/lab/daily-items', input)
+  return data
+}
+
+export async function updateDailyItem(id: number, input: Partial<DailyItemInput>): Promise<DailyItem> {
+  const { data } = await api.patch<DailyItem>(`/lab/daily-items/${id}`, input)
+  return data
+}
+
+export async function deleteDailyItem(id: number): Promise<void> {
+  await api.delete(`/lab/daily-items/${id}`)
+}
+
+export async function fetchDailyChecks(year: number, month: number): Promise<DailyCheck[]> {
+  const { data } = await api.get<DailyCheck[]>('/lab/daily-checks', { params: { year, month } })
+  return data
+}
+
+export async function toggleDailyCheck(item: number, date: string): Promise<{ checked: boolean }> {
+  const { data } = await api.post<{ item: number; date: string; checked: boolean }>('/lab/daily-checks/toggle', {
+    item,
+    date,
+  })
+  return data
+}
+
 export interface Customer {
   id: number
   name: string

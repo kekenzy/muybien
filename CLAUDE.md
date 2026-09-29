@@ -53,6 +53,10 @@ Django REST API + Vue 3 SPA 構成。**CSS は Tailwind CSS 4**（scoped CSS / S
 | GET/POST | `/v1/api/lab/customers` | 顧客管理 |
 | GET/POST | `/v1/api/lab/tasks` | タスク管理（ToDo・WBSで共通。`parent`で階層、`dependencies`で先行タスク） |
 | PATCH/DELETE | `/v1/api/lab/tasks/<id>` | タスク更新・削除（子タスクも削除） |
+| GET/POST | `/v1/api/lab/daily-items` | Daily（毎日やること）の項目管理。`color`・`mark`（star/circle/heart/diamond/triangle/check）でカレンダーの印を指定 |
+| PATCH/DELETE | `/v1/api/lab/daily-items/<id>` | Daily項目の更新・削除（`is_active=false`で非表示、削除はチェック記録ごと消える） |
+| GET | `/v1/api/lab/daily-checks?year=&month=` | 月のDailyチェック一覧 |
+| POST | `/v1/api/lab/daily-checks/toggle` | `{item, date}` のチェックを反転（レスポンスの `checked` が反転後の状態） |
 | POST | `/v1/api/lab/customers/<id>/invite` | 顧客をLabログインユーザーとして招待（再送可） |
 | GET/POST | `/v1/api/lab/users` | ユーザー管理（Django User） |
 | POST | `/v1/api/lab/users/<id>/invite` | ユーザーへ招待メール再送（リンク期限切れの救済） |

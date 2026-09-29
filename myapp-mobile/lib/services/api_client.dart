@@ -273,6 +273,58 @@ class ApiClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> listDailyItems() async {
+    final res = await _authedRequest('GET', '/lab/daily-items');
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'Daily項目の取得に失敗しました'));
+    }
+    return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+  }
+
+  /// [fields] は API のフィールド名そのまま（title / color / mark / order / is_active）
+  Future<Map<String, dynamic>> createDailyItem(Map<String, dynamic> fields) async {
+    final res = await _authedRequest('POST', '/lab/daily-items', body: fields);
+    if (res.statusCode != 201) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'Daily項目の作成に失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateDailyItem(int id, Map<String, dynamic> fields) async {
+    final res = await _authedRequest('PATCH', '/lab/daily-items/$id', body: fields);
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'Daily項目の更新に失敗しました'));
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<void> deleteDailyItem(int id) async {
+    final res = await _authedRequest('DELETE', '/lab/daily-items/$id');
+    if (res.statusCode != 204) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'Daily項目の削除に失敗しました'));
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> listDailyChecks(int year, int month) async {
+    final res = await _authedRequest('GET', '/lab/daily-checks?year=$year&month=$month');
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'Dailyチェックの取得に失敗しました'));
+    }
+    return (jsonDecode(res.body) as List).cast<Map<String, dynamic>>();
+  }
+
+  /// チェックを反転し、反転後の状態（true=チェック済み）を返す
+  Future<bool> toggleDailyCheck(int itemId, DateTime date) async {
+    final res = await _authedRequest('POST', '/lab/daily-checks/toggle', body: {
+      'item': itemId,
+      'date': _ymd(date),
+    });
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, _errorMessage(res, 'チェックの更新に失敗しました'));
+    }
+    return (jsonDecode(res.body) as Map<String, dynamic>)['checked'] as bool;
+  }
+
   /// API に渡す日付文字列（YYYY-MM-DD）
   String ymd(DateTime d) => _ymd(d);
 

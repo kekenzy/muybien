@@ -6,6 +6,7 @@ export type MenuKey =
   | 'tasks'
   | 'diary'
   | 'memo'
+  | 'daily'
   | 'reservations'
   | 'users'
   | 'roles'
@@ -18,6 +19,7 @@ export const MENU_OPTIONS: { key: MenuKey; label: string }[] = [
   { key: 'tasks', label: 'タスク管理' },
   { key: 'diary', label: '日記' },
   { key: 'memo', label: 'メモ' },
+  { key: 'daily', label: 'Daily' },
   { key: 'reservations', label: '予約管理' },
   { key: 'users', label: 'ユーザー管理' },
   { key: 'roles', label: '権限管理' },

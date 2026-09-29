@@ -24,11 +24,14 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .invitations import resend_invite_email, send_invite_email
-from .models import Customer, DiaryEntry, DiaryPhoto, LabTask, Memo, Role, RoleMenuPermission, UserProfile
+from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, Role, RoleMenuPermission, UserProfile
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
     ContactAdminSerializer,
     CustomerSerializer,
+    DailyCheckSerializer,
+    DailyCheckToggleSerializer,
+    DailyItemSerializer,
     DiaryEntrySerializer,
     DiaryPhotoSerializer,
     LabTaskSerializer,
@@ -312,6 +315,55 @@ class MemoDetailView(generics.RetrieveUpdateDestroyAPIView):
     menu_key = 'memo'
     serializer_class = MemoSerializer
     queryset = Memo.objects.all()
+
+
+class DailyItemListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'daily'
+    serializer_class = DailyItemSerializer
+    queryset = DailyItem.objects.all()
+
+
+class DailyItemDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'daily'
+    serializer_class = DailyItemSerializer
+    queryset = DailyItem.objects.all()
+
+
+class DailyCheckListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'daily'
+    serializer_class = DailyCheckSerializer
+
+    def get_queryset(self):
+        queryset = DailyCheck.objects.all()
+        year = self.request.query_params.get('year')
+        month = self.request.query_params.get('month')
+        if year:
+            queryset = queryset.filter(date__year=year)
+        if month:
+            queryset = queryset.filter(date__month=month)
+        return queryset
+
+
+class DailyCheckToggleView(APIView):
+    """指定日の項目のチェックを反転する。レスポンスの checked が反転後の状態。"""
+
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'daily'
+
+    def post(self, request):
+        serializer = DailyCheckToggleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        item = serializer.validated_data['item']
+        date = serializer.validated_data['date']
+
+        deleted, _ = DailyCheck.objects.filter(item=item, date=date).delete()
+        if deleted:
+            return Response({'item': item.id, 'date': date.isoformat(), 'checked': False})
+        DailyCheck.objects.get_or_create(item=item, date=date)
+        return Response({'item': item.id, 'date': date.isoformat(), 'checked': True})
 
 
 class UserListCreateView(generics.ListCreateAPIView):
