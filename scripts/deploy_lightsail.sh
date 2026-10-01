@@ -87,5 +87,12 @@ else
     exit 1
 fi
 
+# 前回デプロイの未使用イメージ・停止コンテナ・ビルドキャッシュを消す。
+# ボリューム（postgres_data / static / media）は --volumes を付けないので残る。
+echo ""
+echo "🧹 未使用の Docker イメージとビルドキャッシュを削除中（ボリュームは残します）..."
+$DOCKER system prune -af
+$DOCKER builder prune -af
+
 echo ""
 echo "✅ デプロイが完了しました！"
