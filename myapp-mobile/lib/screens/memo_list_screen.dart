@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../config.dart';
 import '../models/note_item.dart';
 import '../services/api_client.dart';
 import 'memo_edit_screen.dart';
 import 'note_detail_screen.dart';
 
+/// 日記タブの「一覧」。AppBar は親の DiaryScreen が持つ。
 class MemoListScreen extends StatefulWidget {
-  const MemoListScreen({super.key});
+  /// 通知されたら再読み込みする（カレンダー側での変更を反映するため）
+  final Listenable? reloadSignal;
+
+  const MemoListScreen({super.key, this.reloadSignal});
 
   @override
   State<MemoListScreen> createState() => _MemoListScreenState();
@@ -17,18 +20,17 @@ class _MemoListScreenState extends State<MemoListScreen> {
   List<NoteItem>? _notes;
   String? _error;
 
-  String get _hostLabel {
-    try {
-      return Uri.parse(apiBaseUrl).host;
-    } catch (_) {
-      return apiBaseUrl;
-    }
-  }
-
   @override
   void initState() {
     super.initState();
+    widget.reloadSignal?.addListener(_load);
     _load();
+  }
+
+  @override
+  void dispose() {
+    widget.reloadSignal?.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -56,11 +58,10 @@ class _MemoListScreenState extends State<MemoListScreen> {
   }
 
   Future<void> _openDetail(NoteItem note) async {
-    final page = note.kind == NoteKind.diary
-        ? MemoEditScreen(note: note)
-        : NoteDetailScreen(note: note);
+    // 前へ・次へは日付の古い順に移動する
+    final ordered = [...?_notes]..sort((a, b) => a.date.compareTo(b.date));
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => page),
+      MaterialPageRoute(builder: (_) => NoteDetailScreen(note: note, notes: ordered)),
     );
     if (changed == true) _load();
   }
@@ -73,23 +74,6 @@ class _MemoListScreenState extends State<MemoListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('メモ', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-            Text(
-              '接続先: $_hostLabel',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _buildBody(),

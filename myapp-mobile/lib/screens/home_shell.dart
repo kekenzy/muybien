@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'calendar_screen.dart';
 import 'daily_screen.dart';
-import 'memo_list_screen.dart';
+import 'diary_screen.dart';
 import 'settings_screen.dart';
 import 'task_list_screen.dart';
 
-/// 下タブ（カレンダー・一覧・タスク・Daily・設定）を持つホーム画面
+/// 下タブ（日記・タスク・Daily・設定）を持つホーム画面
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -18,8 +17,7 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
   static const _tabs = [
-    CalendarScreen(),
-    MemoListScreen(),
+    DiaryScreen(),
     TaskListScreen(),
     DailyScreen(),
     SettingsScreen(),
@@ -33,8 +31,7 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'カレンダー'),
-          NavigationDestination(icon: Icon(Icons.list_alt_outlined), selectedIcon: Icon(Icons.list_alt), label: '一覧'),
+          NavigationDestination(icon: Icon(Icons.book_outlined), selectedIcon: Icon(Icons.book), label: '日記'),
           NavigationDestination(icon: Icon(Icons.task_alt_outlined), selectedIcon: Icon(Icons.task_alt), label: 'タスク'),
           NavigationDestination(icon: Icon(Icons.star_outline), selectedIcon: Icon(Icons.star), label: 'Daily'),
           NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '設定'),

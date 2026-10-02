@@ -7,8 +7,12 @@ import 'memo_edit_screen.dart';
 import 'note_detail_screen.dart';
 import 'task_edit_screen.dart';
 
+/// 日記タブの「カレンダー」。AppBar は親の DiaryScreen が持つ。
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+  /// 通知されたら再読み込みする（一覧側での変更を反映するため）
+  final Listenable? reloadSignal;
+
+  const CalendarScreen({super.key, this.reloadSignal});
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -21,6 +25,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   String? _error;
   late DateTime _month; // 表示中の月（day=1固定）
   late DateTime _selectedDate;
+  int _slideDirection = 1; // 月送りのアニメーション方向（1=次月, -1=前月）
 
   @override
   void initState() {
@@ -28,7 +33,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final now = DateTime.now();
     _month = DateTime(now.year, now.month, 1);
     _selectedDate = DateTime(now.year, now.month, now.day);
+    widget.reloadSignal?.addListener(_load);
     _load();
+  }
+
+  @override
+  void dispose() {
+    widget.reloadSignal?.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -58,6 +70,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return notes.where((n) => n.date.year == day.year && n.date.month == day.month && n.date.day == day.day).toList();
   }
 
+  static const _cellHeight = 48.0;
   static const _memoColor = Colors.indigo;
   static final _diaryColor = Colors.orange.shade700;
   static final _taskColor = Colors.green.shade700;
@@ -65,7 +78,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
   void _changeMonth(int delta) {
-    setState(() => _month = DateTime(_month.year, _month.month + delta, 1));
+    setState(() {
+      _slideDirection = delta;
+      _month = DateTime(_month.year, _month.month + delta, 1);
+    });
+  }
+
+  /// 横スワイプで月を切り替える（左へ払うと次月）
+  void _onHorizontalSwipe(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity.abs() < 200) return;
+    _changeMonth(velocity < 0 ? 1 : -1);
+  }
+
+  /// その日の日記で最初に添付された写真（カレンダーのサムネイル用）
+  String? _thumbnailOn(List<NoteItem> dayNotes) {
+    for (final n in dayNotes) {
+      if (n.kind == NoteKind.diary && n.photos.isNotEmpty) return n.photos.first.url;
+    }
+    return null;
   }
 
   Future<void> _openEditor({DateTime? initialDate}) async {
@@ -90,13 +121,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
       changed = await Navigator.of(context).push<bool>(
         MaterialPageRoute(builder: (_) => TaskEditScreen(task: task)),
       );
-    } else if (note.kind == NoteKind.diary) {
-      changed = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(builder: (_) => MemoEditScreen(note: note)),
-      );
     } else {
+      // 前へ・次へはメモ・日記を日付の古い順に移動する（タスクは含めない）
+      final ordered = (_notes ?? const <NoteItem>[]).where((n) => n.kind != NoteKind.task).toList();
       changed = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(builder: (_) => NoteDetailScreen(note: note)),
+        MaterialPageRoute(builder: (_) => NoteDetailScreen(note: note, notes: ordered)),
       );
     }
     if (changed == true) _load();
@@ -105,7 +134,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('カレンダー')),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _error != null ? _buildError() : _buildBody(),
@@ -142,7 +170,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _buildMonthHeader(),
         const SizedBox(height: 4),
         _buildWeekdayRow(),
-        _buildMonthGrid(),
+        GestureDetector(
+          onHorizontalDragEnd: _onHorizontalSwipe,
+          child: ClipRect(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              transitionBuilder: (child, animation) {
+                final incoming = child.key == ValueKey(_month);
+                final dx = (incoming ? 1.0 : -1.0) * _slideDirection;
+                return SlideTransition(
+                  position: Tween(begin: Offset(dx, 0), end: Offset.zero).animate(animation),
+                  child: child,
+                );
+              },
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.topCenter,
+                children: [...previous, if (current != null) current],
+              ),
+              child: KeyedSubtree(key: ValueKey(_month), child: _buildMonthGrid()),
+            ),
+          ),
+        ),
         const SizedBox(height: 6),
         _buildLegend(),
         const SizedBox(height: 12),
@@ -241,7 +289,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             final cellIndex = row * 7 + col;
             final dayNum = cellIndex - leadingBlanks + 1;
             if (dayNum < 1 || dayNum > daysInMonth) {
-              return const Expanded(child: SizedBox(height: 42));
+              return const Expanded(child: SizedBox(height: _cellHeight));
             }
             final day = DateTime(_month.year, _month.month, dayNum);
             final isSelected = _isSameDay(day, _selectedDate);
@@ -251,21 +299,36 @@ class _CalendarScreenState extends State<CalendarScreen> {
             final hasDiary = dayNotes.any((n) => n.kind == NoteKind.diary);
             final hasTask = dayNotes.any((n) => n.kind == NoteKind.task);
             final hasNotes = hasMemo || hasDiary || hasTask;
-            final dotColor = isSelected ? Theme.of(context).colorScheme.onPrimary : null;
+            final thumbnail = _thumbnailOn(dayNotes);
+            final hasThumb = thumbnail != null;
+            // 写真のある日は塗りつぶさず枠線で選択を示す
+            final filled = isSelected && !hasThumb;
+            final dotColor = filled ? Theme.of(context).colorScheme.onPrimary : null;
             return Expanded(
               child: GestureDetector(
                 onTap: () => setState(() => _selectedDate = day),
                 child: Container(
-                  height: 42,
+                  height: _cellHeight,
                   margin: const EdgeInsets.all(1.5),
                   decoration: BoxDecoration(
-                    color: isSelected
+                    color: filled
                         ? Theme.of(context).colorScheme.primary
                         : (hasNotes ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5) : Colors.transparent),
-                    borderRadius: BorderRadius.circular(9),
-                    border: isToday && !isSelected
-                        ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1.2)
+                    image: hasThumb
+                        ? DecorationImage(
+                            image: NetworkImage(thumbnail),
+                            fit: BoxFit.cover,
+                            // 日付の数字を読みやすくするため少し暗くする
+                            colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.28), BlendMode.darken),
+                            onError: (_, __) {},
+                          )
                         : null,
+                    borderRadius: BorderRadius.circular(9),
+                    border: isSelected && hasThumb
+                        ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2.5)
+                        : (isToday && !isSelected
+                            ? Border.all(color: Theme.of(context).colorScheme.primary, width: 1.2)
+                            : null),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -274,10 +337,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         '$dayNum',
                         style: TextStyle(
                           fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : (col == 0 ? Colors.red.shade300 : (col == 6 ? Colors.blue.shade300 : null)),
+                          fontWeight: hasThumb ? FontWeight.w800 : FontWeight.w600,
+                          color: hasThumb
+                              ? Colors.white
+                              : (filled
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : (col == 0 ? Colors.red.shade300 : (col == 6 ? Colors.blue.shade300 : null))),
+                          shadows: hasThumb ? const [Shadow(color: Colors.black54, blurRadius: 3)] : null,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -294,7 +360,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color: dotColor ?? _diaryColor,
-                                        boxShadow: isSelected
+                                        boxShadow: filled
                                             ? null
                                             : [BoxShadow(color: _diaryColor.withValues(alpha: 0.5), blurRadius: 3, offset: const Offset(0, 1))],
                                       ),
@@ -307,7 +373,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color: dotColor ?? _memoColor,
-                                        boxShadow: isSelected
+                                        boxShadow: filled
                                             ? null
                                             : [BoxShadow(color: _memoColor.withValues(alpha: 0.5), blurRadius: 3, offset: const Offset(0, 1))],
                                       ),
@@ -320,7 +386,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color: dotColor ?? _taskColor,
-                                        boxShadow: isSelected
+                                        boxShadow: filled
                                             ? null
                                             : [BoxShadow(color: _taskColor.withValues(alpha: 0.5), blurRadius: 3, offset: const Offset(0, 1))],
                                       ),
