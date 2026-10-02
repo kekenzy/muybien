@@ -87,12 +87,12 @@ else
     exit 1
 fi
 
-# 前回デプロイの未使用イメージ・停止コンテナ・ビルドキャッシュを消す。
-# ボリューム（postgres_data / static / media）は --volumes を付けないので残る。
+# 停止コンテナと、作り直してタグが外れた古いイメージだけ消す。
+# ビルドキャッシュとボリュームは残す。キャッシュを消すと次回も apt からやり直しになる。
 echo ""
-echo "🧹 未使用の Docker イメージとビルドキャッシュを削除中（ボリュームは残します）..."
-$DOCKER system prune -af
-$DOCKER builder prune -af
+echo "🧹 未使用のコンテナと古いイメージを削除中（ビルドキャッシュとボリュームは残します）..."
+$DOCKER container prune -f
+$DOCKER image prune -f
 
 echo ""
 echo "✅ デプロイが完了しました！"
