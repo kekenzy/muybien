@@ -124,6 +124,26 @@ class Task {
 
   bool get isClosed => status == TaskStatus.done || status == TaskStatus.cancelled;
 
+  /// [updateParent] が true のときだけ親を変える（トップレベルへ戻すときは [parentId] を null にする）。
+  Task copyWith({int? order, int? parentId, bool updateParent = false}) {
+    return Task(
+      id: id,
+      title: title,
+      description: description,
+      status: status,
+      priority: priority,
+      startDate: startDate,
+      dueDate: dueDate,
+      durationDays: durationDays,
+      progress: progress,
+      parentId: updateParent ? parentId : this.parentId,
+      order: order ?? this.order,
+      dependencies: dependencies,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   factory Task.fromJson(Map<String, dynamic> json) {
     DateTime? date(String key) {
       final raw = json[key] as String?;

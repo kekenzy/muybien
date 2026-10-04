@@ -104,7 +104,7 @@
                 <span
                   v-if="canEdit"
                   draggable="true"
-                  class="cursor-grab text-white/20 hover:text-white/70"
+                  class="cursor-grab px-0.5 text-base leading-none text-white/45 hover:text-white"
                   title="ドラッグで並べ替え"
                   @click.stop
                   @dragstart="onRowDragStart($event, row)"
@@ -497,6 +497,7 @@ function onRowDragEnd() {
 
 function onRowDragOver(event: DragEvent, row: TaskRow) {
   if (draggingRowId.value == null) return
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
   if (descendantIds(props.tasks, draggingRowId.value).has(row.task.id)) {
     dropTarget.value = null
     return

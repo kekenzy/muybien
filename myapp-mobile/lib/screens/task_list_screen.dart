@@ -20,6 +20,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   _ViewMode _mode = _ViewMode.todo;
   bool _showClosed = false;
   Task? _dragging;
+  _WbsDrop? _wbsDrop;
   final Set<int> _collapsed = {};
 
   @override
@@ -370,8 +371,60 @@ class _TaskListScreenState extends State<TaskListScreen> {
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 80),
       itemCount: rows.length,
       separatorBuilder: (_, __) => const SizedBox(height: 4),
-      itemBuilder: (context, index) => _buildWbsRow(rows[index]),
+      itemBuilder: (context, index) => _buildWbsRow(rows[index], tasks),
     );
+  }
+
+  /// 落とした行と同じ親の並びへ入れる。上半分ならその前、下半分ならその後ろ。
+  Future<void> _reorderWbs(int draggedId, int targetId, bool after) async {
+    final tasks = _visibleTasks;
+    if (draggedId == targetId || descendantIds(tasks, draggedId).contains(targetId)) return;
+    final draggedIndex = tasks.indexWhere((t) => t.id == draggedId);
+    final targetIndex = tasks.indexWhere((t) => t.id == targetId);
+    if (draggedIndex < 0 || targetIndex < 0) return;
+    final target = tasks[targetIndex];
+
+    final parentId = target.parentId;
+    final siblings = tasks.where((t) => t.parentId == parentId && t.id != draggedId).toList()
+      ..sort((a, b) => a.order != b.order ? a.order.compareTo(b.order) : a.id.compareTo(b.id));
+    var index = siblings.indexWhere((t) => t.id == target.id);
+    if (index < 0) return;
+    if (after) index += 1;
+    final orderedIds = siblings.map((t) => t.id).toList()..insert(index, draggedId);
+
+    final previous = _tasks;
+    setState(() {
+      _tasks = [
+        for (final task in _tasks!)
+          () {
+            final place = orderedIds.indexOf(task.id);
+            if (place < 0) return task;
+            return task.copyWith(
+              order: place + 1,
+              parentId: task.id == draggedId ? parentId : task.parentId,
+              updateParent: task.id == draggedId,
+            );
+          }(),
+      ];
+    });
+
+    try {
+      final updates = <Future<void>>[];
+      for (var i = 0; i < orderedIds.length; i++) {
+        final original = tasks.firstWhere((t) => t.id == orderedIds[i]);
+        final fields = <String, dynamic>{};
+        if (original.order != i + 1) fields['order'] = i + 1;
+        if (orderedIds[i] == draggedId && original.parentId != parentId) fields['parent'] = parentId;
+        if (fields.isEmpty) continue;
+        updates.add(ApiClient.instance.updateTask(orderedIds[i], fields));
+      }
+      await Future.wait(updates);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _tasks = previous);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('並べ替えに失敗しました: $e')));
+      }
+    }
   }
 
   String _periodLabel(Task task) {
@@ -385,11 +438,27 @@ class _TaskListScreenState extends State<TaskListScreen> {
     return '$range（$daysLabel日）';
   }
 
-  Widget _buildWbsRow(TaskRow row) {
+  Widget _buildWbsRow(TaskRow row, List<Task> tasks) {
     final task = row.task;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     final done = task.status == TaskStatus.done;
-    return Padding(
+    final drop = _wbsDrop;
+    final highlighted = drop?.id == task.id;
+    return _WbsDragRow(
+      taskId: task.id,
+      title: task.title.isEmpty ? '(無題)' : task.title,
+      tasks: tasks,
+      highlighted: highlighted,
+      dropAfter: highlighted && drop!.after,
+      onDragStarted: () => setState(() => _wbsDrop = null),
+      onDragEnded: () => setState(() => _wbsDrop = null),
+      onHover: (after) {
+        final current = _wbsDrop;
+        if (current != null && current.id == task.id && current.after == after) return;
+        setState(() => _wbsDrop = _WbsDrop(task.id, after));
+      },
+      onDrop: _reorderWbs,
+      child: Padding(
       padding: EdgeInsets.only(left: row.level * 14.0),
       child: _card(
         onTap: () => _openEditor(task: task),
@@ -480,6 +549,97 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
         ),
       ),
+    ),
+    );
+  }
+}
+
+class _WbsDrop {
+  final int id;
+  final bool after;
+  const _WbsDrop(this.id, this.after);
+}
+
+/// WBS の1行。左のつまみを長押しして、別の行の上半分／下半分へ落とすと順番が変わる。
+class _WbsDragRow extends StatelessWidget {
+  final int taskId;
+  final String title;
+  final List<Task> tasks;
+  final bool highlighted;
+  final bool dropAfter;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnded;
+  final void Function(bool after) onHover;
+  final void Function(int draggedId, int targetId, bool after) onDrop;
+  final Widget child;
+
+  const _WbsDragRow({
+    required this.taskId,
+    required this.title,
+    required this.tasks,
+    required this.highlighted,
+    required this.dropAfter,
+    required this.onDragStarted,
+    required this.onDragEnded,
+    required this.onHover,
+    required this.onDrop,
+    required this.child,
+  });
+
+  bool _after(BuildContext context, Offset global) {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return false;
+    return box.globalToLocal(global).dy >= box.size.height / 2;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DragTarget<int>(
+      onWillAcceptWithDetails: (details) {
+        if (details.data == taskId) return false;
+        return !descendantIds(tasks, details.data).contains(taskId);
+      },
+      onMove: (details) => onHover(_after(context, details.offset)),
+      onAcceptWithDetails: (details) => onDrop(details.data, taskId, _after(context, details.offset)),
+      builder: (context, candidate, rejected) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              top: highlighted && !dropAfter ? BorderSide(color: scheme.primary, width: 2) : BorderSide.none,
+              bottom: highlighted && dropAfter ? BorderSide(color: scheme.primary, width: 2) : BorderSide.none,
+            ),
+          ),
+          child: Row(
+            children: [
+              LongPressDraggable<int>(
+                data: taskId,
+                delay: const Duration(milliseconds: 180),
+                onDragStarted: onDragStarted,
+                onDragEnd: (_) => onDragEnded(),
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 240),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                    ),
+                  ),
+                ),
+                childWhenDragging: Icon(Icons.drag_handle, size: 18, color: scheme.onSurfaceVariant.withValues(alpha: 0.3)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Icon(Icons.drag_handle, size: 18, color: scheme.onSurfaceVariant),
+                ),
+              ),
+              Expanded(child: child),
+            ],
+          ),
+        );
+      },
     );
   }
 }

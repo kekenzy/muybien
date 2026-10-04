@@ -164,6 +164,21 @@ export interface DiaryEntryInput {
   content: string
 }
 
+export interface Memo {
+  id: number
+  date: string | null
+  title: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MemoInput {
+  date: string | null
+  title: string
+  content: string
+}
+
 export async function fetchTasks(): Promise<LabTask[]> {
   const { data } = await api.get<LabTask[]>('/lab/tasks')
   return data
@@ -181,6 +196,25 @@ export async function updateTask(id: number, input: Partial<LabTaskInput>): Prom
 
 export async function deleteTask(id: number): Promise<void> {
   await api.delete(`/lab/tasks/${id}`)
+}
+
+export async function fetchMemos(): Promise<Memo[]> {
+  const { data } = await api.get<Memo[]>('/lab/memos')
+  return data
+}
+
+export async function createMemo(input: MemoInput): Promise<Memo> {
+  const { data } = await api.post<Memo>('/lab/memos', input)
+  return data
+}
+
+export async function updateMemo(id: number, input: MemoInput): Promise<Memo> {
+  const { data } = await api.patch<Memo>(`/lab/memos/${id}`, input)
+  return data
+}
+
+export async function deleteMemo(id: number): Promise<void> {
+  await api.delete(`/lab/memos/${id}`)
 }
 
 export async function fetchDiaries(year: number, month: number): Promise<DiaryEntry[]> {

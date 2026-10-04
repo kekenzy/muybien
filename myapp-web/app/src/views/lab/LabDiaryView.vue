@@ -3,7 +3,7 @@
     <div class="mb-8 flex items-center justify-between">
       <div>
         <h2 class="text-xl font-bold">日記</h2>
-        <p class="text-sm text-white/60 mt-1">カレンダーから日付を選んで記録する</p>
+        <p class="text-sm text-white/60 mt-1">カレンダーから日付を選んで、日記・メモ・タスクを記録する</p>
       </div>
       <div class="flex items-center gap-3">
         <button type="button" class="text-white/70 hover:text-white transition-colors" @click="changeMonth(-1)">
@@ -41,6 +41,12 @@
         />
         <span v-else-if="day.diary" class="w-full truncate text-[10px] text-primary">
           📔 {{ day.diary.title || day.diary.content }}
+        </span>
+        <span v-for="memo in day.memos.slice(0, 1)" :key="memo.id" class="w-full truncate text-[10px] text-indigo-300">
+          📝 {{ memo.title || memo.content || 'メモ' }}
+        </span>
+        <span v-if="day.memos.length > 1" class="w-full truncate text-[10px] text-white/50">
+          メモ他{{ day.memos.length - 1 }}件
         </span>
         <span v-for="task in day.tasks.slice(0, 2)" :key="task.id" class="w-full truncate text-[10px] text-yellow-400">
           📌 {{ task.title }}
@@ -149,6 +155,85 @@
             {{ selectedDiary ? '更新する' : '保存する' }}
           </button>
         </div>
+
+        <div v-if="canRead('memo')" class="border-t border-white/10 pt-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-medium">メモ</h4>
+            <button
+              v-if="canWrite('memo') && editingMemoKey === null"
+              type="button"
+              class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40"
+              @click="startNewMemo"
+            >
+              追加
+            </button>
+          </div>
+          <p v-if="selectedMemos.length === 0 && editingMemoKey === null" class="text-xs text-white/40">この日のメモはありません</p>
+          <div v-for="memo in selectedMemos" :key="memo.id" class="rounded-xl border border-white/10 p-3 space-y-2">
+            <template v-if="editingMemoKey === memo.id">
+              <input
+                v-model="memoForm.title"
+                type="text"
+                placeholder="タイトル"
+                class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
+              />
+              <textarea
+                v-model="memoForm.content"
+                rows="4"
+                placeholder="本文"
+                class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
+              />
+              <div class="flex justify-end gap-2">
+                <button type="button" class="text-xs text-white/60 hover:text-white" @click="editingMemoKey = null">キャンセル</button>
+                <button
+                  type="button"
+                  class="text-xs px-3 py-1.5 rounded-full bg-primary text-black font-medium disabled:opacity-50"
+                  :disabled="memoSaving || (!memoForm.title && !memoForm.content)"
+                  @click="saveMemo"
+                >
+                  保存
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium truncate">{{ memo.title || '無題' }}</p>
+                  <p class="text-xs text-white/60 whitespace-pre-wrap">{{ memo.content }}</p>
+                </div>
+                <div v-if="canWrite('memo')" class="flex shrink-0 gap-2 text-xs">
+                  <button type="button" class="text-white/60 hover:text-white" @click="startEditMemo(memo)">編集</button>
+                  <button type="button" class="text-red-400/70 hover:text-red-400" @click="removeMemo(memo)">削除</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <div v-if="editingMemoKey === 'new'" class="rounded-xl border border-white/10 p-3 space-y-2">
+            <input
+              v-model="memoForm.title"
+              type="text"
+              placeholder="タイトル"
+              class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
+            />
+            <textarea
+              v-model="memoForm.content"
+              rows="4"
+              placeholder="本文"
+              class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm focus:outline-none focus:border-primary/60"
+            />
+            <div class="flex justify-end gap-2">
+              <button type="button" class="text-xs text-white/60 hover:text-white" @click="editingMemoKey = null">キャンセル</button>
+              <button
+                type="button"
+                class="text-xs px-3 py-1.5 rounded-full bg-primary text-black font-medium disabled:opacity-50"
+                :disabled="memoSaving || (!memoForm.title && !memoForm.content)"
+                @click="saveMemo"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -158,17 +243,22 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   createDiary,
+  createMemo,
   deleteDiary,
   deleteDiaryPhoto,
+  deleteMemo,
   fetchDiaries,
+  fetchMemos,
   fetchTasks,
   updateDiary,
+  updateMemo,
   uploadDiaryPhoto,
   type DiaryEntry,
   type DiaryPhoto,
   type LabTask,
+  type Memo,
 } from '../../lib/api'
-import { canWrite } from '../../lib/permissions'
+import { canRead, canWrite } from '../../lib/permissions'
 
 const weekdays = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -177,6 +267,7 @@ const year = ref(today.getFullYear())
 const month = ref(today.getMonth() + 1)
 
 const diaries = ref<DiaryEntry[]>([])
+const memos = ref<Memo[]>([])
 const tasks = ref<LabTask[]>([])
 const loading = ref(true)
 const saving = ref(false)
@@ -185,6 +276,9 @@ const selectedDate = ref<string>(toIso(today))
 const showDialog = ref(false)
 
 const form = reactive({ title: '', content: '' })
+const memoForm = reactive({ title: '', content: '' })
+const editingMemoKey = ref<number | 'new' | null>(null)
+const memoSaving = ref(false)
 const cameraInput = ref<HTMLInputElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const pendingFiles = ref<File[]>([])
@@ -200,7 +294,12 @@ interface CalendarDay {
   iso: string
   inMonth: boolean
   diary: DiaryEntry | undefined
+  memos: Memo[]
   tasks: LabTask[]
+}
+
+function memoDay(memo: Memo): string {
+  return memo.date || memo.created_at.slice(0, 10)
 }
 
 function toIso(date: Date): string {
@@ -213,6 +312,8 @@ function toIso(date: Date): string {
 const selectedDiary = computed<DiaryEntry | undefined>(() =>
   diaries.value.find((d) => d.date === selectedDate.value),
 )
+
+const selectedMemos = computed(() => memos.value.filter((memo) => memoDay(memo) === selectedDate.value))
 
 const calendarDays = computed<CalendarDay[]>(() => {
   const firstOfMonth = new Date(year.value, month.value - 1, 1)
@@ -229,6 +330,7 @@ const calendarDays = computed<CalendarDay[]>(() => {
       iso,
       inMonth: date.getMonth() === month.value - 1,
       diary: diaries.value.find((d) => d.date === iso),
+      memos: memos.value.filter((memo) => memoDay(memo) === iso),
       tasks: tasks.value.filter((t) => t.due_date === iso),
     })
   }
@@ -304,7 +406,20 @@ async function onPickPhotos(event: Event) {
 function selectDay(iso: string) {
   selectedDate.value = iso
   applySelectedToForm()
+  editingMemoKey.value = null
   showDialog.value = true
+}
+
+function startNewMemo() {
+  memoForm.title = ''
+  memoForm.content = ''
+  editingMemoKey.value = 'new'
+}
+
+function startEditMemo(memo: Memo) {
+  memoForm.title = memo.title
+  memoForm.content = memo.content
+  editingMemoKey.value = memo.id
 }
 
 function closeDialog() {
@@ -315,9 +430,14 @@ async function loadCalendarData() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const [diaryData, taskData] = await Promise.all([fetchDiaries(year.value, month.value), fetchTasks()])
+    const [diaryData, taskData, memoData] = await Promise.all([
+      fetchDiaries(year.value, month.value),
+      fetchTasks(),
+      canRead('memo') ? fetchMemos().catch(() => [] as Memo[]) : Promise.resolve([] as Memo[]),
+    ])
     diaries.value = diaryData
     tasks.value = taskData
+    memos.value = memoData
     applySelectedToForm()
   } catch {
     errorMsg.value = 'データの取得に失敗しました。'
@@ -372,6 +492,36 @@ async function saveDiary() {
     errorMsg.value = '保存に失敗しました。'
   } finally {
     saving.value = false
+  }
+}
+
+async function saveMemo() {
+  memoSaving.value = true
+  errorMsg.value = ''
+  try {
+    const input = { date: selectedDate.value, title: memoForm.title, content: memoForm.content }
+    if (editingMemoKey.value === 'new') {
+      await createMemo(input)
+    } else if (typeof editingMemoKey.value === 'number') {
+      await updateMemo(editingMemoKey.value, input)
+    }
+    editingMemoKey.value = null
+    memos.value = canRead('memo') ? await fetchMemos() : []
+  } catch {
+    errorMsg.value = 'メモの保存に失敗しました。'
+  } finally {
+    memoSaving.value = false
+  }
+}
+
+async function removeMemo(memo: Memo) {
+  if (!confirm(`「${memo.title || '無題'}」を削除しますか？`)) return
+  try {
+    await deleteMemo(memo.id)
+    memos.value = memos.value.filter((item) => item.id !== memo.id)
+    if (editingMemoKey.value === memo.id) editingMemoKey.value = null
+  } catch {
+    errorMsg.value = 'メモの削除に失敗しました。'
   }
 }
 
