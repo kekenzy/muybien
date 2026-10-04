@@ -24,7 +24,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .invitations import resend_invite_email, send_invite_email
-from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, Role, RoleMenuPermission, UserProfile
+from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission, UserProfile
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
     ContactAdminSerializer,
@@ -34,6 +34,7 @@ from .serializers import (
     DailyItemSerializer,
     DiaryEntrySerializer,
     DiaryPhotoSerializer,
+    MemoPhotoSerializer,
     LabTaskSerializer,
     MemoSerializer,
     RoleSerializer,
@@ -307,14 +308,49 @@ class MemoListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'memo'
     serializer_class = MemoSerializer
-    queryset = Memo.objects.all()
+    queryset = Memo.objects.prefetch_related('photos')
 
 
 class MemoDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'memo'
     serializer_class = MemoSerializer
-    queryset = Memo.objects.all()
+    queryset = Memo.objects.prefetch_related('photos')
+
+
+class MemoPhotoUploadView(APIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'memo'
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        memo = get_object_or_404(Memo, pk=pk)
+        uploaded = request.FILES.get('file')
+        if uploaded is None:
+            return Response({'detail': 'file が必要です'}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded.size > 20 * 1024 * 1024:
+            return Response({'detail': '20MB以下の画像にしてください'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            data = _jpeg_bytes(uploaded)
+        except Exception:
+            return Response({'detail': '画像として読み込めませんでした'}, status=status.HTTP_400_BAD_REQUEST)
+        key = f'memo/{memo.pk}/{uuid.uuid4().hex}.jpg'
+        save_bytes(key, data, 'image/jpeg')
+        photo = MemoPhoto.objects.create(memo=memo, storage_key=key)
+        return Response(
+            MemoPhotoSerializer(photo, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class MemoPhotoDetailView(APIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'memo'
+
+    def delete(self, request, pk, photo_id):
+        photo = get_object_or_404(MemoPhoto, pk=photo_id, memo_id=pk)
+        photo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DailyItemListCreateView(generics.ListCreateAPIView):

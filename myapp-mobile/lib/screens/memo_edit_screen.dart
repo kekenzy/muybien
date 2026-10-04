@@ -73,30 +73,34 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
     try {
       final title = _kind == NoteKind.diary ? '' : _titleController.text;
       final content = _contentController.text;
-      int? diaryId;
+      final int recordId;
       if (_isEditing) {
-        final id = widget.note!.id;
+        recordId = widget.note!.id;
         if (_kind == NoteKind.diary) {
-          await ApiClient.instance.updateDiary(id, title, content, _date);
-          diaryId = id;
+          await ApiClient.instance.updateDiary(recordId, title, content, _date);
         } else {
-          await ApiClient.instance.updateMemo(id, title, content, date: _date);
+          await ApiClient.instance.updateMemo(recordId, title, content, date: _date);
         }
+      } else if (_kind == NoteKind.diary) {
+        final created = await ApiClient.instance.createDiary(title, content, _date);
+        recordId = created['id'] as int;
       } else {
+        final created = await ApiClient.instance.createMemo(title, content, date: _date);
+        recordId = created['id'] as int;
+      }
+      for (final photoId in _removedPhotoIds) {
         if (_kind == NoteKind.diary) {
-          final created = await ApiClient.instance.createDiary(title, content, _date);
-          diaryId = created['id'] as int;
+          await ApiClient.instance.deleteDiaryPhoto(recordId, photoId);
         } else {
-          await ApiClient.instance.createMemo(title, content, date: _date);
+          await ApiClient.instance.deleteMemoPhoto(recordId, photoId);
         }
       }
-      if (diaryId != null) {
-        for (final photoId in _removedPhotoIds) {
-          await ApiClient.instance.deleteDiaryPhoto(diaryId, photoId);
-        }
-        for (final file in _pending) {
-          final bytes = await file.readAsBytes();
-          await ApiClient.instance.uploadDiaryPhoto(diaryId, bytes, file.name);
+      for (final file in _pending) {
+        final bytes = await file.readAsBytes();
+        if (_kind == NoteKind.diary) {
+          await ApiClient.instance.uploadDiaryPhoto(recordId, bytes, file.name);
+        } else {
+          await ApiClient.instance.uploadMemoPhoto(recordId, bytes, file.name);
         }
       }
       if (mounted) Navigator.of(context).pop(true);
@@ -325,7 +329,7 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
                 textAlignVertical: TextAlignVertical.top,
               ),
             ),
-            if (_kind == NoteKind.diary) ...[
+            if (_kind == NoteKind.diary || _kind == NoteKind.memo) ...[
               const SizedBox(height: 8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 168),

@@ -9,6 +9,7 @@ const LAB_MENU_ROUTES: { menuKey: MenuKey; path: string }[] = [
   { menuKey: 'customers', path: '/lab/customers' },
   { menuKey: 'tasks', path: '/lab/tasks' },
   { menuKey: 'diary', path: '/lab/diary' },
+  { menuKey: 'memo', path: '/lab/memos' },
   { menuKey: 'daily', path: '/lab/daily' },
   { menuKey: 'reservations', path: '/lab/reservations' },
   { menuKey: 'users', path: '/lab/users' },
@@ -73,6 +74,12 @@ const router = createRouter({
           name: 'lab-diary',
           component: () => import('../views/lab/LabDiaryView.vue'),
           meta: { requiresAuth: true, menuKey: 'diary' },
+        },
+        {
+          path: 'memos',
+          name: 'lab-memos',
+          component: () => import('../views/lab/LabMemoView.vue'),
+          meta: { requiresAuth: true, menuKey: 'memo' },
         },
         {
           path: 'daily',

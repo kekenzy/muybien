@@ -4,7 +4,7 @@ from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, Role, RoleMenuPermission
+from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission
 from .storage import photo_url
 
 User = get_user_model()
@@ -88,11 +88,25 @@ class DiaryEntrySerializer(serializers.ModelSerializer):
         extra_kwargs = {'content': {'allow_blank': True}}
 
 
+class MemoPhotoSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MemoPhoto
+        fields = ['id', 'url', 'created_at']
+        read_only_fields = fields
+
+    def get_url(self, obj):
+        return photo_url(obj.storage_key, self.context.get('request'))
+
+
 class MemoSerializer(serializers.ModelSerializer):
+    photos = MemoPhotoSerializer(many=True, read_only=True)
+
     class Meta:
         model = Memo
-        fields = ['id', 'date', 'title', 'content', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'date', 'title', 'content', 'photos', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'photos', 'created_at', 'updated_at']
 
 
 class DailyItemSerializer(serializers.ModelSerializer):

@@ -113,6 +113,8 @@ const allNavItems: { name: string; to: string; label: string; menuKey: MenuKey }
   { name: 'lab-customers', to: '/lab/customers', label: '顧客管理', menuKey: 'customers' },
   { name: 'lab-tasks', to: '/lab/tasks', label: 'タスク管理', menuKey: 'tasks' },
   { name: 'lab-diary', to: '/lab/diary', label: '日記', menuKey: 'diary' },
+  { name: 'lab-memos', to: '/lab/memos', label: 'メモ', menuKey: 'memo' },
+  { name: 'lab-memos', to: '/lab/memos', label: 'メモ', menuKey: 'memo' },
   { name: 'lab-daily', to: '/lab/daily', label: 'Daily', menuKey: 'daily' },
   { name: 'lab-reservations', to: '/lab/reservations', label: '予約管理', menuKey: 'reservations' },
   { name: 'lab-users', to: '/lab/users', label: 'ユーザー管理', menuKey: 'users' },

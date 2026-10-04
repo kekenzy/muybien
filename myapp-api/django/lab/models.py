@@ -218,6 +218,32 @@ class Memo(models.Model):
         return self.title or f'メモ #{self.pk}'
 
 
+class MemoPhoto(models.Model):
+    memo = models.ForeignKey(
+        Memo,
+        verbose_name='メモ',
+        related_name='photos',
+        on_delete=models.CASCADE,
+    )
+    storage_key = models.CharField('保存キー', max_length=255)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'メモの写真'
+        verbose_name_plural = 'メモの写真'
+        ordering = ['id']
+
+    def __str__(self):
+        return self.storage_key
+
+
+@receiver(pre_delete, sender=MemoPhoto)
+def _remove_memo_photo_file(sender, instance, **kwargs):
+    from .storage import delete_bytes
+
+    delete_bytes(instance.storage_key)
+
+
 class DailyItem(models.Model):
     """毎日やること。無効化した項目はカレンダーに出さないが、過去のチェック記録は残す。"""
 

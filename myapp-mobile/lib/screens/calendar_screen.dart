@@ -91,10 +91,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _changeMonth(velocity < 0 ? 1 : -1);
   }
 
-  /// その日の日記で最初に添付された写真（カレンダーのサムネイル用）
+  /// その日の日記、なければメモで最初に添付された写真
   String? _thumbnailOn(List<NoteItem> dayNotes) {
     for (final n in dayNotes) {
       if (n.kind == NoteKind.diary && n.photos.isNotEmpty) return n.photos.first.url;
+    }
+    for (final n in dayNotes) {
+      if (n.kind == NoteKind.memo && n.photos.isNotEmpty) return n.photos.first.url;
     }
     return null;
   }

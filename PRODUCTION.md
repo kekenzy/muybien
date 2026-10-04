@@ -142,7 +142,7 @@ Django は SMTP クライアントとして SES に接続し、お問い合わ�
 | `AWS_S3_DIARY_BUCKET` | 日記写真用バケット。空ならサーバー内 media | `muybien-diary-photos` |
 | `AWS_S3_REGION` | バケットのリージョン | `ap-northeast-1` |
 
-Lightsail のインスタンスロールでは通常の S3 に書けません。`diary/*` だけを許可した IAM ユーザーのアクセスキーを `.env.prod` に置きます。手順は [DIARY_PHOTOS.md](DIARY_PHOTOS.md)。
+Lightsail のインスタンスロールでは通常の S3 に書けません。`diary/*` と `memo/*` を許可した IAM ユーザーのアクセスキーを `.env.prod` に置きます。手順は [DIARY_PHOTOS.md](DIARY_PHOTOS.md)。
 
 ---
 

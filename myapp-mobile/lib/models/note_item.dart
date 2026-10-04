@@ -58,6 +58,9 @@ class NoteItem {
       date: DateTime(date.year, date.month, date.day),
       title: (json['title'] as String?) ?? '',
       content: (json['content'] as String?) ?? '',
+      photos: ((json['photos'] as List?) ?? [])
+          .map((item) => DiaryPhoto.fromJson(item as Map<String, dynamic>))
+          .toList(),
       createdAt: createdAt,
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );

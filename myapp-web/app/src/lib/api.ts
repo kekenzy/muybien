@@ -169,6 +169,7 @@ export interface Memo {
   date: string | null
   title: string
   content: string
+  photos: DiaryPhoto[]
   created_at: string
   updated_at: string
 }
@@ -215,6 +216,17 @@ export async function updateMemo(id: number, input: MemoInput): Promise<Memo> {
 
 export async function deleteMemo(id: number): Promise<void> {
   await api.delete(`/lab/memos/${id}`)
+}
+
+export async function uploadMemoPhoto(memoId: number, file: File): Promise<DiaryPhoto> {
+  const body = new FormData()
+  body.append('file', file)
+  const { data } = await api.post<DiaryPhoto>(`/lab/memos/${memoId}/photos`, body)
+  return data
+}
+
+export async function deleteMemoPhoto(memoId: number, photoId: number): Promise<void> {
+  await api.delete(`/lab/memos/${memoId}/photos/${photoId}`)
 }
 
 export async function fetchDiaries(year: number, month: number): Promise<DiaryEntry[]> {

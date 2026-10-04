@@ -28,5 +28,7 @@ RSYNC_EXCLUDES=(
   --exclude='.env'
   --exclude='.env.prod'
   --exclude='myapp-api/django/log'
+  --exclude='myapp-api/django/staticfiles'
+  --exclude='myapp-api/django/media'
   --exclude='.DS_Store'
 )
