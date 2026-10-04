@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../config.dart';
+import '../models/note_item.dart';
 import 'calendar_screen.dart';
 import 'memo_list_screen.dart';
 
 enum _ViewMode { calendar, list }
 
-/// 日記（メモ・日記・期限付きタスク）。タスク管理の ToDo / WBS と同じく、カレンダーと一覧を切り替えて表示する。
+/// 日記（日記と期限付きタスク）。タスク管理の ToDo / WBS と同じく、カレンダーと一覧を切り替えて表示する。
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});
 
@@ -84,7 +85,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
         index: _mode.index,
         children: [
           CalendarScreen(reloadSignal: _calendarReload),
-          MemoListScreen(reloadSignal: _listReload),
+          MemoListScreen(kind: NoteKind.diary, reloadSignal: _listReload),
         ],
       ),
     );

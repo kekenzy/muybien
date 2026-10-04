@@ -10,8 +10,9 @@ import 'photo_viewer.dart';
 class MemoEditScreen extends StatefulWidget {
   final NoteItem? note;
   final DateTime? initialDate;
+  final NoteKind? initialKind;
 
-  const MemoEditScreen({super.key, this.note, this.initialDate});
+  const MemoEditScreen({super.key, this.note, this.initialDate, this.initialKind});
 
   @override
   State<MemoEditScreen> createState() => _MemoEditScreenState();
@@ -40,8 +41,7 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
     super.initState();
     final base = widget.note?.date ?? widget.initialDate ?? DateTime.now();
     _date = DateTime(base.year, base.month, base.day);
-    // 新規は日記（Labカレンダーと共通）として保存。既存は種別を維持。
-    _kind = widget.note?.kind ?? NoteKind.diary;
+    _kind = widget.note?.kind ?? widget.initialKind ?? NoteKind.diary;
     _photos = List<DiaryPhoto>.from(widget.note?.photos ?? const []);
   }
 
@@ -290,7 +290,7 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
       appBar: AppBar(
         title: Text(_isEditing
             ? (_kind == NoteKind.diary ? '日記を編集' : 'メモを編集')
-            : '新規'),
+            : (_kind == NoteKind.diary ? '日記を追加' : 'メモを追加')),
         actions: [
           if (_isEditing)
             IconButton(onPressed: _saving ? null : _delete, icon: const Icon(Icons.delete_outline)),
@@ -301,8 +301,8 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!_isEditing) _buildKindSelector(),
-            if (!_isEditing) const SizedBox(height: 12),
+            if (!_isEditing && widget.initialKind == null) _buildKindSelector(),
+            if (!_isEditing && widget.initialKind == null) const SizedBox(height: 12),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
               onPressed: _pickDate,

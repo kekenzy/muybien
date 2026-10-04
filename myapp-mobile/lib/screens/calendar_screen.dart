@@ -47,17 +47,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() => _error = null);
     try {
       final results = await Future.wait([
-        ApiClient.instance.listMemos(),
         ApiClient.instance.listDiaries(),
         ApiClient.instance.listTasks(),
       ]);
-      final memos = results[0].map(NoteItem.fromMemoJson);
-      final diaries = results[1].map(NoteItem.fromDiaryJson);
+      final diaries = results[0].map(NoteItem.fromDiaryJson);
       // 期限日（due_date）が設定されているタスクのみカレンダーに表示する
-      final tasks = results[2]
+      final tasks = results[1]
           .where((t) => (t['due_date'] as String?)?.isNotEmpty == true)
           .map(NoteItem.fromTaskJson);
-      final notes = [...memos, ...diaries, ...tasks]..sort((a, b) => a.date.compareTo(b.date));
+      final notes = [...diaries, ...tasks]..sort((a, b) => a.date.compareTo(b.date));
       setState(() => _notes = notes);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -91,20 +89,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _changeMonth(velocity < 0 ? 1 : -1);
   }
 
-  /// その日の日記、なければメモで最初に添付された写真
+  /// その日の日記で最初に添付された写真
   String? _thumbnailOn(List<NoteItem> dayNotes) {
     for (final n in dayNotes) {
       if (n.kind == NoteKind.diary && n.photos.isNotEmpty) return n.photos.first.url;
-    }
-    for (final n in dayNotes) {
-      if (n.kind == NoteKind.memo && n.photos.isNotEmpty) return n.photos.first.url;
     }
     return null;
   }
 
   Future<void> _openEditor({DateTime? initialDate}) async {
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => MemoEditScreen(initialDate: initialDate)),
+      MaterialPageRoute(builder: (_) => MemoEditScreen(initialDate: initialDate, initialKind: NoteKind.diary)),
     );
     if (changed == true) _load();
   }
@@ -202,7 +197,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         if (selectedNotes.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(child: Text('この日のメモ・日記・タスクはありません。', style: TextStyle(fontSize: 13))),
+            child: Center(child: Text('この日の日記・タスクはありません。', style: TextStyle(fontSize: 13))),
           )
         else
           ...selectedNotes.map(_buildNoteTile),
@@ -271,8 +266,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
       children: [
         item(_diaryColor, '日記'),
         const SizedBox(width: 12),
-        item(_memoColor, 'メモ'),
-        const SizedBox(width: 12),
         item(_taskColor, 'タスク'),
       ],
     );
@@ -298,10 +291,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
             final isSelected = _isSameDay(day, _selectedDate);
             final isToday = _isSameDay(day, today);
             final dayNotes = _notesOn(day);
-            final hasMemo = dayNotes.any((n) => n.kind == NoteKind.memo);
             final hasDiary = dayNotes.any((n) => n.kind == NoteKind.diary);
             final hasTask = dayNotes.any((n) => n.kind == NoteKind.task);
-            final hasNotes = hasMemo || hasDiary || hasTask;
+            final hasNotes = hasDiary || hasTask;
             final thumbnail = _thumbnailOn(dayNotes);
             final hasThumb = thumbnail != null;
             // 写真のある日は塗りつぶさず枠線で選択を示す
@@ -368,20 +360,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                             : [BoxShadow(color: _diaryColor.withValues(alpha: 0.5), blurRadius: 3, offset: const Offset(0, 1))],
                                       ),
                                     ),
-                                  if (hasDiary && (hasMemo || hasTask)) const SizedBox(width: 4),
-                                  if (hasMemo)
-                                    Container(
-                                      width: 7,
-                                      height: 7,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: dotColor ?? _memoColor,
-                                        boxShadow: filled
-                                            ? null
-                                            : [BoxShadow(color: _memoColor.withValues(alpha: 0.5), blurRadius: 3, offset: const Offset(0, 1))],
-                                      ),
-                                    ),
-                                  if (hasMemo && hasTask) const SizedBox(width: 4),
+                                  if (hasDiary && hasTask) const SizedBox(width: 4),
                                   if (hasTask)
                                     Container(
                                       width: 7,
@@ -412,7 +391,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildSelectedDateHeader() {
     final d = _selectedDate;
     return Text(
-      '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')} のメモ・日記・タスク',
+      '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')} の日記・タスク',
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
     );
   }

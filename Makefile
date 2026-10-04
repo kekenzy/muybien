@@ -6,11 +6,45 @@ WEB_CONTAINER=muybien-web
 # docker info の応答待ちで make 全体が固まらないようにする
 DOCKER = $(shell docker info >/dev/null 2>&1 && echo docker || echo sudo docker)
 
-.PHONY: local-urls
+.DEFAULT_GOAL := help
 
-# ─────────────────────────────────────────
-# ローカル開発
-# ─────────────────────────────────────────
+.PHONY: help local-urls
+
+help:
+	@echo ""
+	@echo "使い方: make <コマンド>"
+	@echo ""
+	@echo "ローカル開発"
+	@printf "  %-22s %s\n" "up" "コンテナを起動する"
+	@printf "  %-22s %s\n" "down" "コンテナを停止する"
+	@printf "  %-22s %s\n" "restart" "コンテナを再起動する"
+	@printf "  %-22s %s\n" "db-up" "DB コンテナだけ起動する"
+	@printf "  %-22s %s\n" "init-db" "DB の起動と muybiendb の有無を確認する"
+	@printf "  %-22s %s\n" "migrate" "マイグレーションを適用する"
+	@printf "  %-22s %s\n" "makemigrations" "マイグレーションファイルを生成する"
+	@printf "  %-22s %s\n" "createsuperuser" "スーパーユーザーを作成する"
+	@printf "  %-22s %s\n" "logs" "全コンテナのログを表示する"
+	@printf "  %-22s %s\n" "api-logs" "API ログを表示する"
+	@printf "  %-22s %s\n" "api-bash" "API コンテナのシェルを開く"
+	@printf "  %-22s %s\n" "web-bash" "フロントコンテナのシェルを開く"
+	@printf "  %-22s %s\n" "local-urls" "ローカル URL を表示する"
+	@printf "  %-22s %s\n" "build-front" "フロントを本番用にビルドする"
+	@printf "  %-22s %s\n" "docker-refresh" "未使用イメージとビルドキャッシュを削除する（ボリュームは残す）"
+	@echo ""
+	@echo "本番（Lightsail）"
+	@printf "  %-22s %s\n" "deploy" "本番へデプロイする（prod-deploy と同じ）"
+	@printf "  %-22s %s\n" "prod-logs" "本番ログを表示する"
+	@printf "  %-22s %s\n" "prod-migrate" "本番マイグレーションを適用する"
+	@printf "  %-22s %s\n" "prod-createsuperuser" "本番スーパーユーザーを作成する"
+	@printf "  %-22s %s\n" "prod-bash" "本番 API コンテナのシェルを開く"
+	@printf "  %-22s %s\n" "prod-down" "本番コンテナを停止する"
+	@echo ""
+	@echo "スマホアプリ"
+	@printf "  %-22s %s\n" "ios-install" "iPhone にインストールする（DEVICE=端末ID）"
+	@printf "  %-22s %s\n" "android-install" "Android にインストールする（DEVICE=端末ID）"
+	@printf "  %-22s %s\n" "ios-sim" "iOS シミュレータで起動する"
+	@printf "  %-22s %s\n" "ios-release" "App Store 提出用 IPA をビルドする"
+	@echo ""
 local-urls:
 	@echo ""
 	@echo "ローカル URL:"

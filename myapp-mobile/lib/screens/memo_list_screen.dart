@@ -5,12 +5,14 @@ import '../services/api_client.dart';
 import 'memo_edit_screen.dart';
 import 'note_detail_screen.dart';
 
-/// 日記タブの「一覧」。AppBar は親の DiaryScreen が持つ。
+/// 日記またはメモの一覧。日記のときは親の DiaryScreen が AppBar を持つ。
 class MemoListScreen extends StatefulWidget {
+  final NoteKind kind;
+
   /// 通知されたら再読み込みする（カレンダー側での変更を反映するため）
   final Listenable? reloadSignal;
 
-  const MemoListScreen({super.key, this.reloadSignal});
+  const MemoListScreen({super.key, required this.kind, this.reloadSignal});
 
   @override
   State<MemoListScreen> createState() => _MemoListScreenState();
@@ -36,13 +38,12 @@ class _MemoListScreenState extends State<MemoListScreen> {
   Future<void> _load() async {
     setState(() => _error = null);
     try {
-      final results = await Future.wait([
-        ApiClient.instance.listMemos(),
-        ApiClient.instance.listDiaries(),
-      ]);
-      final memos = results[0].map(NoteItem.fromMemoJson);
-      final diaries = results[1].map(NoteItem.fromDiaryJson);
-      final notes = [...memos, ...diaries]
+      final raw = widget.kind == NoteKind.memo
+          ? await ApiClient.instance.listMemos()
+          : await ApiClient.instance.listDiaries();
+      final notes = raw
+          .map(widget.kind == NoteKind.memo ? NoteItem.fromMemoJson : NoteItem.fromDiaryJson)
+          .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
       setState(() => _notes = notes);
     } catch (e) {
@@ -52,7 +53,7 @@ class _MemoListScreenState extends State<MemoListScreen> {
 
   Future<void> _openEditor() async {
     final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const MemoEditScreen()),
+      MaterialPageRoute(builder: (_) => MemoEditScreen(initialKind: widget.kind)),
     );
     if (changed == true) _load();
   }
@@ -73,13 +74,17 @@ class _MemoListScreenState extends State<MemoListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMemo = widget.kind == NoteKind.memo;
     return Scaffold(
+      appBar: isMemo
+          ? AppBar(title: const Text('メモ', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)))
+          : null,
       body: RefreshIndicator(
         onRefresh: _load,
         child: _buildBody(),
       ),
       floatingActionButton: FloatingActionButton(
-        heroTag: 'memo_fab',
+        heroTag: widget.kind == NoteKind.memo ? 'memo_fab' : 'diary_list_fab',
         onPressed: _openEditor,
         child: const Icon(Icons.add),
       ),
@@ -105,9 +110,9 @@ class _MemoListScreenState extends State<MemoListScreen> {
     if (notes.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('メモ・日記はまだありません。＋ボタンで追加できます。')),
+        children: [
+          const SizedBox(height: 120),
+          Center(child: Text(widget.kind == NoteKind.memo ? 'メモはまだありません。＋ボタンで追加できます。' : '日記はまだありません。＋ボタンで追加できます。')),
         ],
       );
     }
