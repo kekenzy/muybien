@@ -44,10 +44,13 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
   }
 
-  void _openPhoto(String url) {
+  void _openPhoto(int index) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PhotoViewer(image: NetworkImage(url)),
+        builder: (_) => PhotoViewer(
+          images: [for (final photo in _note.photos) NetworkImage(photo.url)],
+          initialIndex: index,
+        ),
       ),
     );
   }
@@ -123,7 +126,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                 itemBuilder: (context, index) {
                   final photo = _note.photos[index];
                   return GestureDetector(
-                    onTap: () => _openPhoto(photo.url),
+                    onTap: () => _openPhoto(index),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(

@@ -32,12 +32,19 @@
         @click="startEdit(memo)"
       >
         <span class="w-16 shrink-0 text-xs font-medium text-indigo-300">{{ memoLabel(memo) }}</span>
-        <img
+        <span
           v-if="memo.photos?.length"
-          :src="memo.photos[0].url"
-          alt=""
-          class="h-14 w-14 shrink-0 rounded-lg object-cover"
-        />
+          class="relative h-14 w-14 shrink-0 cursor-zoom-in"
+          @click.stop="openViewer(memo.photos.map((photo) => photo.url), 0)"
+        >
+          <img :src="memo.photos[0].url" alt="" class="h-14 w-14 rounded-lg object-cover" />
+          <span
+            v-if="memo.photos.length > 1"
+            class="absolute bottom-0.5 right-0.5 rounded bg-black/70 px-1 text-[10px]"
+          >
+            {{ memo.photos.length }}
+          </span>
+        </span>
         <span class="min-w-0">
           <span class="block truncate text-sm font-medium">{{ memo.title || '無題' }}</span>
           <span class="mt-1 block line-clamp-2 text-xs text-white/60 whitespace-pre-wrap">{{ memo.content || '本文なし' }}</span>
@@ -81,26 +88,34 @@
         <div>
           <label class="block text-xs text-white/60 mb-2">写真</label>
           <div class="flex flex-wrap gap-2 mb-3">
-            <button
-              v-for="photo in keptPhotos"
-              :key="photo.id"
-              type="button"
-              class="relative h-20 w-20"
-              @click="removedPhotoIds.push(photo.id)"
-            >
-              <img :src="photo.url" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
-              <span class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 rounded px-1">削除</span>
-            </button>
-            <button
-              v-for="(file, index) in pendingFiles"
-              :key="file.name + index"
-              type="button"
-              class="relative h-20 w-20"
-              @click="removePending(index)"
-            >
-              <img :src="pendingUrls[index]" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
-              <span class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 rounded px-1">取消</span>
-            </button>
+            <div v-for="(photo, index) in keptPhotos" :key="photo.id" class="relative h-20 w-20">
+              <button type="button" class="h-20 w-20 cursor-zoom-in" @click="openViewer(dialogPhotoUrls, index)">
+                <img :src="photo.url" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
+              </button>
+              <button
+                type="button"
+                class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 hover:bg-black rounded px-1"
+                @click="removedPhotoIds.push(photo.id)"
+              >
+                削除
+              </button>
+            </div>
+            <div v-for="(file, index) in pendingFiles" :key="file.name + index" class="relative h-20 w-20">
+              <button
+                type="button"
+                class="h-20 w-20 cursor-zoom-in"
+                @click="openViewer(dialogPhotoUrls, keptPhotos.length + index)"
+              >
+                <img :src="pendingUrls[index]" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
+              </button>
+              <button
+                type="button"
+                class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 hover:bg-black rounded px-1"
+                @click="removePending(index)"
+              >
+                取消
+              </button>
+            </div>
           </div>
           <div class="flex flex-wrap gap-2">
             <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40" @click="fileInput?.click()">
@@ -137,6 +152,8 @@
         </div>
       </div>
     </div>
+
+    <PhotoViewer v-if="viewer" :urls="viewer.urls" :start-index="viewer.index" @close="viewer = null" />
   </div>
 </template>
 
@@ -153,6 +170,7 @@ import {
   type Memo,
 } from '../../lib/api'
 import { canWrite } from '../../lib/permissions'
+import PhotoViewer from '../../components/lab/PhotoViewer.vue'
 
 const memos = ref<Memo[]>([])
 const loading = ref(true)
@@ -166,10 +184,18 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const pendingFiles = ref<File[]>([])
 const pendingUrls = ref<string[]>([])
 const removedPhotoIds = ref<number[]>([])
+const viewer = ref<{ urls: string[]; index: number } | null>(null)
 
 const keptPhotos = computed<DiaryPhoto[]>(() =>
   (editing.value?.photos ?? []).filter((photo) => !removedPhotoIds.value.includes(photo.id)),
 )
+
+// 保存済み・追加予定を並び順どおりにまとめ、ビューアで続けて見られるようにする
+const dialogPhotoUrls = computed(() => [...keptPhotos.value.map((photo) => photo.url), ...pendingUrls.value])
+
+function openViewer(urls: string[], index: number) {
+  viewer.value = { urls, index }
+}
 
 function todayIso(): string {
   const now = new Date()

@@ -188,21 +188,25 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
     );
   }
 
-  void _openViewer(ImageProvider image) {
+  void _openViewer(List<ImageProvider> images, int index) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => PhotoViewer(image: image)),
+      MaterialPageRoute(
+        builder: (_) => PhotoViewer(images: images, initialIndex: index),
+      ),
     );
   }
 
   Widget _photoCell({
-    required ImageProvider image,
+    required List<ImageProvider> images,
+    required int index,
     required VoidCallback onRemove,
   }) {
+    final image = images[index];
     return Stack(
       fit: StackFit.expand,
       children: [
         GestureDetector(
-          onTap: () => _openViewer(image),
+          onTap: () => _openViewer(images, index),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image(image: image, fit: BoxFit.cover),
@@ -223,18 +227,25 @@ class _MemoEditScreenState extends State<MemoEditScreen> {
 
   Widget _buildPhotos() {
     final kept = _photos.where((photo) => !_removedPhotoIds.contains(photo.id)).toList();
+    // 保存済み・追加予定をまとめて、ビューアで続けてスワイプできるようにする
+    final images = <ImageProvider>[
+      for (final photo in kept) NetworkImage(photo.url),
+      for (final file in _pending) FileImage(File(file.path)),
+    ];
     Widget pendingCell(int index) {
       return _photoCell(
-        image: FileImage(File(_pending[index].path)),
+        images: images,
+        index: kept.length + index,
         onRemove: () => setState(() => _pending.removeAt(index)),
       );
     }
 
     final cells = <Widget>[
-      for (final photo in kept)
+      for (var i = 0; i < kept.length; i++)
         _photoCell(
-          image: NetworkImage(photo.url),
-          onRemove: () => setState(() => _removedPhotoIds.add(photo.id)),
+          images: images,
+          index: i,
+          onRemove: () => setState(() => _removedPhotoIds.add(kept[i].id)),
         ),
       for (var i = 0; i < _pending.length; i++) pendingCell(i),
     ];
