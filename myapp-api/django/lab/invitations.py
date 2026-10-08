@@ -1,8 +1,8 @@
 from django.conf import settings
-from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.tokens import PasswordResetTokenGenerator, default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import base36_to_int, urlsafe_base64_encode
 
 
 def build_set_password_url(user, *, portal=False):
@@ -48,3 +48,47 @@ def resend_invite_email(user, intro=None, *, portal=False):
             else '永井のLabのパスワード設定リンクを再送します。'
         )
     send_invite_email(user, intro=intro, portal=portal)
+
+
+class LabPasswordResetTokenGenerator(PasswordResetTokenGenerator):
+    """パスワード再設定専用トークン。
+
+    招待用（default_token_generator）と salt を分けて、再設定リンクを招待用エンドポイント
+    （無効化ユーザーも有効化してしまう）では使えないようにし、有効期限も短くする。
+    パスワードハッシュと last_login を含むので、一度使うと（またはログインすると）無効になる。
+    """
+
+    key_salt = 'lab.invitations.LabPasswordResetTokenGenerator'
+    timeout_seconds = 60 * 60
+
+    def check_token(self, user, token):
+        if not super().check_token(user, token):
+            return False
+        try:
+            ts = base36_to_int(token.split('-')[0])
+        except ValueError:
+            return False
+        return self._num_seconds(self._now()) - ts <= self.timeout_seconds
+
+
+password_reset_token_generator = LabPasswordResetTokenGenerator()
+
+
+def send_password_reset_email(user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = password_reset_token_generator.make_token(user)
+    url = f'{settings.FRONTEND_BASE_URL}/lab/reset-password?uid={uid}&token={token}'
+    send_mail(
+        subject='【MuyBien Lab】パスワード再設定',
+        message=(
+            '永井のLabのパスワード再設定のリクエストを受け付けました。\n\n'
+            f'ユーザー名: {user.username}\n\n'
+            '以下のリンクから新しいパスワードを設定してください（有効期限: 1時間）。\n'
+            f'{url}\n\n'
+            'このメールに心当たりがない場合は破棄してください。パスワードは変更されません。\n'
+            'このリンクは第三者に共有しないでください。'
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )

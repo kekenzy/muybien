@@ -1,9 +1,11 @@
 import io
+import logging
 import uuid
 
 from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from PIL import Image, ImageOps
@@ -20,10 +22,16 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .invitations import resend_invite_email, send_invite_email
+from .invitations import (
+    password_reset_token_generator,
+    resend_invite_email,
+    send_invite_email,
+    send_password_reset_email,
+)
 from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission, UserProfile
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
@@ -50,6 +58,10 @@ except ImportError:
     pass
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
+
+MIN_PASSWORD_LENGTH = 8
+PASSWORD_RESET_EMAIL_COOLDOWN_SECONDS = 5 * 60
 
 
 def _sync_user_roles(user, role_ids):
@@ -149,6 +161,104 @@ class SetPasswordView(APIView):
             'detail': 'パスワードを設定しました。',
             'is_customer': hasattr(user, 'customer_profile'),
         })
+
+
+def _is_customer_only(user):
+    return hasattr(user, 'customer_profile') and not user.is_staff and not user.is_superuser
+
+
+class ChangePasswordView(APIView):
+    """ログイン中のユーザーが自分のパスワードを変更する。現在のパスワードの確認が必須。"""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_change'
+
+    def post(self, request):
+        current_password = request.data.get('current_password', '')
+        new_password = request.data.get('new_password', '')
+        user = request.user
+
+        if not user.check_password(current_password):
+            return Response({'detail': '現在のパスワードが正しくありません。'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(new_password) < MIN_PASSWORD_LENGTH:
+            return Response({'detail': 'パスワードは8文字以上で入力してください。'}, status=status.HTTP_400_BAD_REQUEST)
+        if new_password == current_password:
+            return Response({'detail': '現在と異なるパスワードを入力してください。'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+        return Response({'detail': 'パスワードを変更しました。'})
+
+
+class PasswordResetRequestView(APIView):
+    """パスワードを忘れたときの再設定メール送信。
+
+    アカウントの有無を推測されないよう、該当ユーザーがいてもいなくても同じレスポンスを返す。
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+
+    def post(self, request):
+        email = str(request.data.get('email', '')).strip()
+        response = Response({
+            'detail': '入力されたメールアドレスが登録されている場合、パスワード再設定用のリンクを送信しました。',
+        })
+        if not email:
+            return Response({'detail': 'メールアドレスを入力してください。'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 同じ宛先へのメール連打を防ぐ（IP を変えられても宛先単位で抑止する）
+        cooldown_key = f'lab:password-reset:{email.lower()}'
+        if not cache.add(cooldown_key, True, PASSWORD_RESET_EMAIL_COOLDOWN_SECONDS):
+            return response
+
+        for user in User.objects.filter(email__iexact=email, is_active=True):
+            if _is_customer_only(user):
+                continue
+            try:
+                send_password_reset_email(user)
+            except Exception:
+                logger.exception('パスワード再設定メールの送信に失敗しました (user_id=%s)', user.pk)
+        return response
+
+
+class PasswordResetConfirmView(APIView):
+    """再設定メールのリンクから新しいパスワードを設定する。無効化されたユーザーは対象外。"""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+
+    def post(self, request):
+        uidb64 = request.data.get('uid', '')
+        token = request.data.get('token', '')
+        password = request.data.get('password', '')
+
+        if len(password) < MIN_PASSWORD_LENGTH:
+            return Response({'detail': 'パスワードは8文字以上で入力してください。'}, status=status.HTTP_400_BAD_REQUEST)
+
+        invalid = Response(
+            {'detail': 'リンクが無効か、有効期限が切れています。もう一度再設定メールを送信してください。'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return invalid
+
+        if not user.is_active or _is_customer_only(user):
+            return invalid
+        if not password_reset_token_generator.check_token(user, token):
+            return invalid
+
+        user.set_password(password)
+        user.save(update_fields=['password'])
+        return Response({'detail': 'パスワードを再設定しました。'})
 
 
 class ContactListView(generics.ListAPIView):

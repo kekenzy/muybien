@@ -52,6 +52,24 @@ const router = createRouter({
           component: () => import('../views/lab/LabSetPasswordView.vue'),
         },
         {
+          path: 'forgot-password',
+          name: 'lab-forgot-password',
+          component: () => import('../views/lab/LabForgotPasswordView.vue'),
+          meta: { guestOnly: true },
+        },
+        {
+          path: 'reset-password',
+          name: 'lab-reset-password',
+          component: () => import('../views/lab/LabSetPasswordView.vue'),
+          props: { mode: 'reset' },
+        },
+        {
+          path: 'password',
+          name: 'lab-password',
+          component: () => import('../views/lab/LabPasswordView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: '',
           name: 'lab-dashboard',
           component: () => import('../views/lab/LabDashboardView.vue'),

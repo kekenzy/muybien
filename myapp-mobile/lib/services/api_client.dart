@@ -50,6 +50,24 @@ class ApiClient {
     await _saveTokens(access: data['access'] as String, refresh: data['refresh'] as String);
   }
 
+  /// パスワード再設定メールを送信する（未認証）。登録の有無に関わらず同じメッセージが返る。
+  /// メールのリンクは Web の再設定画面（/lab/reset-password）を開く。
+  Future<String> requestPasswordReset(String email) async {
+    final res = await http.post(
+      Uri.parse('$apiBaseUrl/auth/password-reset'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    String? detail;
+    try {
+      detail = (jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>)['detail'] as String?;
+    } catch (_) {}
+    if (res.statusCode != 200) {
+      throw ApiException(res.statusCode, detail ?? '送信に失敗しました');
+    }
+    return detail ?? 'パスワード再設定用のリンクを送信しました。';
+  }
+
   Future<bool> _refreshAccessToken() async {
     final refresh = await _storage.read(key: _refreshKey);
     if (refresh == null) return false;

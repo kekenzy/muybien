@@ -26,6 +26,9 @@
         </div>
         <div v-if="showNav" class="flex items-center gap-4">
           <span v-if="username" class="text-xs text-white/60 hidden sm:inline">{{ username }}</span>
+          <router-link to="/lab/password" class="text-xs text-white/70 hover:text-white transition-colors">
+            パスワード変更
+          </router-link>
           <button
             type="button"
             class="text-xs text-white/70 hover:text-white transition-colors"
@@ -104,9 +107,9 @@ const router = useRouter()
 const username = ref('')
 const menuOpen = ref(false)
 
-const showNav = computed(
-  () => route.name !== 'lab-login' && route.name !== 'lab-set-password' && isLoggedIn(),
-)
+const GUEST_ROUTE_NAMES = ['lab-login', 'lab-set-password', 'lab-forgot-password', 'lab-reset-password']
+
+const showNav = computed(() => !GUEST_ROUTE_NAMES.includes(String(route.name)) && isLoggedIn())
 
 const allNavItems: { name: string; to: string; label: string; menuKey: MenuKey }[] = [
   { name: 'lab-dashboard', to: '/lab', label: 'お問い合わせ一覧', menuKey: 'contacts' },

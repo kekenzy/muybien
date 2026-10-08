@@ -74,6 +74,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    # ScopedRateThrottle を付けたビューだけに効く。本番は nginx 1段なので X-Forwarded-For の末尾を
+    # クライアントIPとして扱う（先頭はクライアントが偽装できるため）
+    'NUM_PROXIES': 1,
+    'DEFAULT_THROTTLE_RATES': {
+        'password_reset': '5/hour',
+        'password_change': '10/hour',
+    },
 }
 
 SIMPLE_JWT = {

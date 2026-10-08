@@ -108,6 +108,23 @@ export async function setPassword(
   return data
 }
 
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api.post('/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}
+
+export async function requestPasswordReset(email: string): Promise<{ detail: string }> {
+  // 未認証エンドポイント（setPassword と同じ理由で JWT を付けない）
+  const { data } = await axios.post<{ detail: string }>('/v1/api/auth/password-reset', { email })
+  return data
+}
+
+export async function confirmPasswordReset(uid: string, token: string, password: string): Promise<void> {
+  await axios.post('/v1/api/auth/password-reset/confirm', { uid, token, password })
+}
+
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'on_hold' | 'cancelled'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
 

@@ -41,6 +41,13 @@
         </button>
       </form>
 
+      <router-link
+        to="/lab/forgot-password"
+        class="block text-center text-xs text-white/60 hover:text-white mt-4 transition-colors"
+      >
+        パスワードをお忘れの方
+      </router-link>
+
       <router-link to="/" class="block text-center text-xs text-white/50 hover:text-white/70 mt-8 transition-colors">
         ← サイトに戻る
       </router-link>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../services/api_client.dart';
+import 'forgot_password_screen.dart';
 import 'home_shell.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -36,8 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeShell()),
       );
-    } catch (e) {
-      setState(() => _error = 'ユーザー名またはパスワードが正しくありません');
+    } on ApiException catch (e) {
+      setState(() => _error = e.statusCode == 401
+          ? 'ユーザー名またはパスワードが正しくありません'
+          : 'ログインに失敗しました（${e.statusCode}）');
+    } catch (_) {
+      setState(() => _error = 'サーバーに接続できません（接続先: $_hostLabel）');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -83,6 +88,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? const SizedBox(
                           width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('ログイン'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                          ),
+                  child: const Text('パスワードをお忘れの方'),
                 ),
               ],
             ),

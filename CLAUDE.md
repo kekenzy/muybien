@@ -47,6 +47,9 @@ Django REST API + Vue 3 SPA 構成。**CSS は Tailwind CSS 4**（scoped CSS / S
 | POST | `/v1/api/auth/login` | Lab ログイン（JWT） |
 | POST | `/v1/api/auth/refresh` | JWT リフレッシュ |
 | GET | `/v1/api/auth/me` | ログイン中ユーザー（権限情報を含む） |
+| POST | `/v1/api/auth/change-password` | ログイン中ユーザーのパスワード変更（現在のパスワード必須） |
+| POST | `/v1/api/auth/password-reset` | パスワード再設定メール送信（未認証。登録有無に関わらず同じ応答） |
+| POST | `/v1/api/auth/password-reset/confirm` | 再設定メールのリンクから新パスワード設定（有効期限1時間・1回限り） |
 | POST | `/v1/api/lab/set-password` | 招待メールのリンクから初回パスワード設定（未認証） |
 | GET | `/v1/api/lab/contacts` | お問い合わせ一覧（要認証） |
 | GET | `/v1/api/lab/contacts/<id>` | お問い合わせ詳細（要認証） |
