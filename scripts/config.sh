@@ -30,5 +30,7 @@ RSYNC_EXCLUDES=(
   --exclude='myapp-api/django/log'
   --exclude='myapp-api/django/staticfiles'
   --exclude='myapp-api/django/media'
+  --exclude='myapp-mobile/build'
+  --exclude='myapp-mobile/.dart_tool'
   --exclude='.DS_Store'
 )

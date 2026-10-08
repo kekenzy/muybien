@@ -63,9 +63,22 @@ if ! $DOCKER compose version &>/dev/null; then
     exit 1
 fi
 
-# コンテナ起動
-echo "🐳 Docker コンテナをビルド・起動中..."
-$DOCKER compose -f "$COMPOSE_FILE" up --build -d
+# ソースと dist はボリュームマウントなので、通常はイメージを作り直さない。
+# python:3.11-slim が変わると gcc の apt からやり直しになり、512MB のインスタンスが固まる。
+# Dockerfile や requirements を変えたときだけ BUILD=1 make deploy
+if [ "${BUILD:-}" = "1" ]; then
+    echo "🐳 Docker イメージをビルドして起動中..."
+    $DOCKER compose -f "$COMPOSE_FILE" up --build -d
+else
+    echo "🐳 既存イメージでコンテナを起動中（再ビルドは BUILD=1 make deploy）..."
+    if ! $DOCKER compose -f "$COMPOSE_FILE" up -d --no-build; then
+        echo "イメージが無いのでビルドします..."
+        $DOCKER compose -f "$COMPOSE_FILE" up --build -d
+    else
+        # gunicorn は起動時のコードを保持する。転送したソースを読むため API だけ再起動する。
+        $DOCKER compose -f "$COMPOSE_FILE" restart myapp-api
+    fi
+fi
 
 # 起動待ち
 echo "⏳ コンテナの起動を待機中..."

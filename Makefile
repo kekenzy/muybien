@@ -32,7 +32,7 @@ help:
 	@printf "  %-22s %s\n" "docker-refresh" "未使用イメージとビルドキャッシュを削除する（ボリュームは残す）"
 	@echo ""
 	@echo "本番（Lightsail）"
-	@printf "  %-22s %s\n" "deploy" "本番へデプロイする（prod-deploy と同じ）"
+	@printf "  %-22s %s\n" "deploy" "本番へデプロイする（イメージ再ビルドは BUILD=1）"
 	@printf "  %-22s %s\n" "prod-logs" "本番ログを表示する"
 	@printf "  %-22s %s\n" "prod-migrate" "本番マイグレーションを適用する"
 	@printf "  %-22s %s\n" "prod-createsuperuser" "本番スーパーユーザーを作成する"
