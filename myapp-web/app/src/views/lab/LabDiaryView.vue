@@ -80,6 +80,7 @@
             v-model="form.content"
             rows="8"
             :disabled="!canWrite('diary')"
+            placeholder="本文。画像は Ctrl+V で貼り付けられます"
             class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm focus:outline-none focus:border-primary/60 disabled:opacity-50"
           />
         </div>
@@ -116,6 +117,7 @@
             <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40" @click="fileInput?.click()">
               ファイルを選択
             </button>
+            <span class="text-[11px] text-white/40 self-center">Ctrl+V で画像を貼り付け</span>
             <button
               v-if="keptPhotos.length || pendingFiles.length"
               type="button"
@@ -155,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   createDiary,
   deleteDiary,
@@ -168,6 +170,7 @@ import {
   type DiaryPhoto,
   type LabTask,
 } from '../../lib/api'
+import { compressImage, filesFromClipboard } from '../../lib/labImages'
 import { canWrite } from '../../lib/permissions'
 
 const weekdays = ['日', '月', '火', '水', '木', '金', '土']
@@ -273,28 +276,11 @@ function removePending(index: number) {
   pendingUrls.value.splice(index, 1)
 }
 
-async function compressImage(file: File): Promise<File> {
-  try {
-    const bitmap = await createImageBitmap(file)
-    const maxEdge = 1600
-    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
-    const width = Math.max(1, Math.round(bitmap.width * scale))
-    const height = Math.max(1, Math.round(bitmap.height * scale))
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return file
-    ctx.drawImage(bitmap, 0, 0, width, height)
-    bitmap.close()
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, 'image/jpeg', 0.72)
-    })
-    if (!blob) return file
-    const name = file.name.replace(/\.[^.]+$/, '') || 'photo'
-    return new File([blob], `${name}.jpg`, { type: 'image/jpeg' })
-  } catch {
-    return file
+async function addFiles(files: File[]) {
+  for (const file of files) {
+    const compressed = await compressImage(file)
+    pendingFiles.value.push(compressed)
+    pendingUrls.value.push(URL.createObjectURL(compressed))
   }
 }
 
@@ -302,12 +288,23 @@ async function onPickPhotos(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files ?? [])
   input.value = ''
-  for (const file of files) {
-    const compressed = await compressImage(file)
-    pendingFiles.value.push(compressed)
-    pendingUrls.value.push(URL.createObjectURL(compressed))
-  }
+  await addFiles(files)
 }
+
+async function onPaste(event: ClipboardEvent) {
+  if (!canWrite('diary') || !showDialog.value) return
+  const files = filesFromClipboard(event)
+  if (!files.length) return
+  event.preventDefault()
+  await addFiles(files)
+}
+
+watch(showDialog, (open) => {
+  if (open) window.addEventListener('paste', onPaste)
+  else window.removeEventListener('paste', onPaste)
+})
+
+onBeforeUnmount(() => window.removeEventListener('paste', onPaste))
 
 function selectDay(iso: string) {
   selectedDate.value = iso

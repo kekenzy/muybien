@@ -15,7 +15,53 @@
           </div>
           <div>
             <label class="block text-xs text-white/60 mb-1">詳細</label>
-            <textarea v-model="form.description" rows="10" :disabled="readonly" :class="inputClass" class="w-full" />
+            <textarea
+              v-model="form.description"
+              rows="8"
+              :disabled="readonly"
+              :class="inputClass"
+              class="w-full"
+              placeholder="詳細。画像は Ctrl+V で貼り付けられます"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs text-white/60 mb-2">写真</label>
+            <div class="flex flex-wrap gap-2 mb-3">
+              <div v-for="photo in keptPhotos" :key="photo.id" class="relative h-20 w-20">
+                <img :src="photo.url" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
+                <button
+                  v-if="!readonly"
+                  type="button"
+                  class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 hover:bg-black rounded px-1"
+                  @click="removedPhotoIds.push(photo.id)"
+                >
+                  削除
+                </button>
+              </div>
+              <div v-for="(file, index) in pendingFiles" :key="file.name + index" class="relative h-20 w-20">
+                <img :src="pendingUrls[index]" alt="" class="h-20 w-20 rounded-lg object-cover border border-white/10" />
+                <button
+                  v-if="!readonly"
+                  type="button"
+                  class="absolute top-0.5 right-0.5 text-[10px] bg-black/70 hover:bg-black rounded px-1"
+                  @click="removePending(index)"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+            <div v-if="!readonly" class="flex flex-wrap gap-2">
+              <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40" @click="fileInput?.click()">
+                ファイルを選択
+              </button>
+              <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40" @click="cameraInput?.click()">
+                カメラ
+              </button>
+              <span class="text-[11px] text-white/40 self-center">Ctrl+V で画像を貼り付け</span>
+            </div>
+            <input ref="cameraInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onPickPhotos" />
+            <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="onPickPhotos" />
           </div>
 
           <div>
@@ -160,8 +206,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
-import type { LabTask, LabTaskInput } from '../../lib/api'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import type { DiaryPhoto, LabTask, LabTaskInput } from '../../lib/api'
+import { compressImage, filesFromClipboard } from '../../lib/labImages'
 import {
   PRIORITY_OPTIONS,
   STATUS_OPTIONS,
@@ -171,6 +218,12 @@ import {
   endDateFromDuration,
   formatDuration,
 } from '../../lib/tasks'
+
+export type TaskFormSubmit = {
+  input: LabTaskInput
+  pendingFiles: File[]
+  removedPhotoIds: number[]
+}
 
 const props = defineProps<{
   task: LabTask | null
@@ -182,7 +235,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  submit: [input: LabTaskInput]
+  submit: [payload: TaskFormSubmit]
   delete: [task: LabTask]
 }>()
 
@@ -207,6 +260,15 @@ const form = reactive<LabTaskInput>({
 })
 
 const durationInput = ref(form.duration_days != null ? formatDuration(Number(form.duration_days)) : '')
+const cameraInput = ref<HTMLInputElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const pendingFiles = ref<File[]>([])
+const pendingUrls = ref<string[]>([])
+const removedPhotoIds = ref<number[]>([])
+
+const keptPhotos = computed<DiaryPhoto[]>(() =>
+  (source?.photos ?? []).filter((photo) => !removedPhotoIds.value.includes(photo.id)),
+)
 
 const dateError = computed(() => {
   if (form.start_date && form.due_date && form.due_date < form.start_date) return '終了日は開始日以降にしてください。'
@@ -233,6 +295,35 @@ function onDependencySelect(event: Event) {
 
 function removeDependency(id: number) {
   form.dependencies = form.dependencies.filter((d) => d !== id)
+}
+
+function removePending(index: number) {
+  URL.revokeObjectURL(pendingUrls.value[index])
+  pendingFiles.value.splice(index, 1)
+  pendingUrls.value.splice(index, 1)
+}
+
+async function addFiles(files: File[]) {
+  for (const file of files) {
+    const compressed = await compressImage(file)
+    pendingFiles.value.push(compressed)
+    pendingUrls.value.push(URL.createObjectURL(compressed))
+  }
+}
+
+async function onPickPhotos(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  await addFiles(files)
+}
+
+async function onPaste(event: ClipboardEvent) {
+  if (props.readonly) return
+  const files = filesFromClipboard(event)
+  if (!files.length) return
+  event.preventDefault()
+  await addFiles(files)
 }
 
 function currentDuration(): number | null {
@@ -263,6 +354,16 @@ function onDueChange() {
 
 function submit() {
   const duration = currentDuration()
-  emit('submit', { ...form, duration_days: duration != null ? duration.toFixed(2) : null })
+  emit('submit', {
+    input: { ...form, duration_days: duration != null ? duration.toFixed(2) : null },
+    pendingFiles: [...pendingFiles.value],
+    removedPhotoIds: [...removedPhotoIds.value],
+  })
 }
+
+onMounted(() => window.addEventListener('paste', onPaste))
+onBeforeUnmount(() => {
+  window.removeEventListener('paste', onPaste)
+  pendingUrls.value.forEach((url) => URL.revokeObjectURL(url))
+})
 </script>

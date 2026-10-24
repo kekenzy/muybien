@@ -146,6 +146,7 @@ export interface LabTask {
   owner_username: string
   is_shared: boolean
   is_mine: boolean
+  photos: DiaryPhoto[]
   created_at: string
   updated_at: string
 }
@@ -220,6 +221,17 @@ export async function updateTask(id: number, input: Partial<LabTaskInput>): Prom
 
 export async function deleteTask(id: number): Promise<void> {
   await api.delete(`/lab/tasks/${id}`)
+}
+
+export async function uploadTaskPhoto(taskId: number, file: File): Promise<DiaryPhoto> {
+  const body = new FormData()
+  body.append('file', file)
+  const { data } = await api.post<DiaryPhoto>(`/lab/tasks/${taskId}/photos`, body)
+  return data
+}
+
+export async function deleteTaskPhoto(taskId: number, photoId: number): Promise<void> {
+  await api.delete(`/lab/tasks/${taskId}/photos/${photoId}`)
 }
 
 export async function fetchMemos(): Promise<Memo[]> {

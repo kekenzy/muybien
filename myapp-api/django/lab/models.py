@@ -136,6 +136,32 @@ class LabTask(models.Model):
         return self.title
 
 
+class TaskPhoto(models.Model):
+    task = models.ForeignKey(
+        LabTask,
+        verbose_name='タスク',
+        related_name='photos',
+        on_delete=models.CASCADE,
+    )
+    storage_key = models.CharField('保存キー', max_length=255)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'タスクの写真'
+        verbose_name_plural = 'タスクの写真'
+        ordering = ['id']
+
+    def __str__(self):
+        return self.storage_key
+
+
+@receiver(pre_delete, sender=TaskPhoto)
+def _remove_task_photo_file(sender, instance, **kwargs):
+    from .storage import delete_bytes
+
+    delete_bytes(instance.storage_key)
+
+
 class Customer(models.Model):
     name = models.CharField('氏名', max_length=100)
     email = models.EmailField('メールアドレス')

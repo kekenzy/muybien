@@ -57,10 +57,7 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       @click.self="requestClose"
     >
-      <div
-        class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0c1220] p-8 space-y-4"
-        @paste="onPaste"
-      >
+      <div class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0c1220] p-8 space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="font-semibold text-base">{{ editing ? 'メモを編集' : 'メモを追加' }}</h3>
           <button type="button" class="text-white/60 hover:text-white" @click="requestClose">✕</button>
@@ -82,7 +79,7 @@
         <textarea
           v-model="form.content"
           rows="6"
-          placeholder="本文。画像はここに貼り付けられます"
+          placeholder="本文。画像は Ctrl+V で貼り付けられます"
           class="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm focus:outline-none focus:border-primary/60"
         />
         <div>
@@ -124,6 +121,7 @@
             <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-white/20 hover:border-white/40" @click="cameraInput?.click()">
               カメラ
             </button>
+            <span class="text-[11px] text-white/40 self-center">Ctrl+V で画像を貼り付け</span>
           </div>
           <input ref="cameraInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onPickPhotos" />
           <input ref="fileInput" type="file" accept="image/*" multiple class="hidden" @change="onPickPhotos" />
@@ -158,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   createMemo,
   deleteMemo,
@@ -169,6 +167,7 @@ import {
   type DiaryPhoto,
   type Memo,
 } from '../../lib/api'
+import { compressImage, filesFromClipboard } from '../../lib/labImages'
 import { canWrite } from '../../lib/permissions'
 import PhotoViewer from '../../components/lab/PhotoViewer.vue'
 
@@ -268,29 +267,6 @@ function removePending(index: number) {
   pendingUrls.value.splice(index, 1)
 }
 
-async function compressImage(file: File): Promise<File> {
-  try {
-    const bitmap = await createImageBitmap(file)
-    const maxEdge = 1600
-    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
-    const width = Math.max(1, Math.round(bitmap.width * scale))
-    const height = Math.max(1, Math.round(bitmap.height * scale))
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return file
-    ctx.drawImage(bitmap, 0, 0, width, height)
-    bitmap.close()
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.72))
-    if (!blob) return file
-    const name = file.name.replace(/\.[^.]+$/, '') || 'photo'
-    return new File([blob], `${name}.jpg`, { type: 'image/jpeg' })
-  } catch {
-    return file
-  }
-}
-
 async function addFiles(files: File[]) {
   for (const file of files) {
     const compressed = await compressImage(file)
@@ -307,18 +283,19 @@ async function onPickPhotos(event: Event) {
 }
 
 async function onPaste(event: ClipboardEvent) {
-  const items = event.clipboardData?.items
-  if (!items) return
-  const files: File[] = []
-  for (const item of items) {
-    if (!item.type.startsWith('image/')) continue
-    const file = item.getAsFile()
-    if (file) files.push(file)
-  }
+  if (!canWrite('memo') || !showDialog.value) return
+  const files = filesFromClipboard(event)
   if (!files.length) return
   event.preventDefault()
   await addFiles(files)
 }
+
+watch(showDialog, (open) => {
+  if (open) window.addEventListener('paste', onPaste)
+  else window.removeEventListener('paste', onPaste)
+})
+
+onBeforeUnmount(() => window.removeEventListener('paste', onPaste))
 
 async function load() {
   loading.value = true

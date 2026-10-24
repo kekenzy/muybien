@@ -94,14 +94,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import TaskFormDialog from '../../components/lab/TaskFormDialog.vue'
+import TaskFormDialog, { type TaskFormSubmit } from '../../components/lab/TaskFormDialog.vue'
 import TaskTodoBoard from '../../components/lab/TaskTodoBoard.vue'
 import TaskWbsChart from '../../components/lab/TaskWbsChart.vue'
 import {
   createTask,
   deleteTask,
+  deleteTaskPhoto,
   fetchTasks,
   updateTask,
+  uploadTaskPhoto,
   type LabTask,
   type LabTaskInput,
   type TaskPriority,
@@ -204,21 +206,33 @@ async function applyCascade(sourceId: number, oldDue: string | null, newDue: str
   }
 }
 
-async function submitForm(input: LabTaskInput) {
+async function submitForm({ input, pendingFiles, removedPhotoIds }: TaskFormSubmit) {
   saving.value = true
   errorMsg.value = ''
   try {
     const current = editingTask.value
+    let saved: LabTask
     if (current) {
       const payload = { ...input }
       if (payload.parent !== current.parent) payload.order = nextOrder(payload.parent)
-      const updated = await updateTask(current.id, payload)
-      replaceTask(updated)
-      await applyCascade(updated.id, current.due_date, updated.due_date)
+      saved = await updateTask(current.id, payload)
+      await applyCascade(saved.id, current.due_date, saved.due_date)
     } else {
-      const created = await createTask({ ...input, order: nextOrder(input.parent) })
-      tasks.value.push(created)
+      saved = await createTask({ ...input, order: nextOrder(input.parent) })
     }
+    for (const photoId of removedPhotoIds) {
+      await deleteTaskPhoto(saved.id, photoId)
+    }
+    for (const file of pendingFiles) {
+      await uploadTaskPhoto(saved.id, file)
+    }
+    if (pendingFiles.length || removedPhotoIds.length) {
+      const refreshed = await fetchTasks()
+      const latest = refreshed.find((t) => t.id === saved.id)
+      if (latest) saved = latest
+    }
+    if (current) replaceTask(saved)
+    else tasks.value.push(saved)
     closeForm()
   } catch {
     errorMsg.value = '保存に失敗しました。'

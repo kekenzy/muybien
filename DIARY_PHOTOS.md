@@ -2,7 +2,7 @@
 
 Lab の日記に写真を添付する機能の手順です。索引は [DOCUMENTATION.md](DOCUMENTATION.md)。本番の環境変数の置き場は [PRODUCTION.md](PRODUCTION.md)。
 
-写真はアップロード時に JPEG（長辺 1600px、品質 72）へ変換して保存します。iPhone の HEIC も受け付けます。1 枚の上限は 20MB です。日記のオブジェクトキーは `diary/<日記ID>/<uuid>.jpg`、メモのオブジェクトキーは `memo/<メモID>/<uuid>.jpg` です。どちらも同じバケットと変換処理を使います。
+写真はアップロード時に JPEG（長辺 1600px、品質 72）へ変換して保存します。iPhone の HEIC も受け付けます。1 枚の上限は 20MB です。オブジェクトキーは `diary/<日記ID>/<uuid>.jpg`、`memo/<メモID>/<uuid>.jpg`、`task/<タスクID>/<uuid>.jpg` です。どれも同じバケットと変換処理を使います。
 
 ---
 
@@ -14,7 +14,7 @@ S3 利用時の URL は 7 日間の署名付き URL です。バケットは非�
 
 通常の S3 バケット `muybien-diary-photo` を使います。本番サーバーは Lightsail のロール `AmazonLightsailInstanceRole`（アカウント `641965853838`）として S3 を呼びます。このロールは IAM からも、バケットポリシーからも、通常の S3 への書き込みを足せません。サーバーからの `PutObject` は `AccessDenied` のままです。
 
-書く権限は、そのバケットの `diary/*` と `memo/*` だけを許可した IAM ユーザーのアクセスキーで渡します。ブロックパブリックアクセスはオンのままにします。`Principal` が `*` の公開ポリシーは使いません。`diary/*` だけのポリシーではメモ写真の保存が `AccessDenied` になります。
+書く権限は、そのバケットの `diary/*`・`memo/*`・`task/*` を許可した IAM ユーザーのアクセスキーで渡します。ブロックパブリックアクセスはオンのままにします。`Principal` が `*` の公開ポリシーは使いません。プレフィックスが足りないと該当種別の写真保存が `AccessDenied` になります。
 
 ---
 
@@ -37,7 +37,8 @@ S3 利用時の URL は 7 日間の署名付き URL です。バケットは非�
       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
       "Resource": [
         "arn:aws:s3:::muybien-diary-photo/diary/*",
-        "arn:aws:s3:::muybien-diary-photo/memo/*"
+        "arn:aws:s3:::muybien-diary-photo/memo/*",
+        "arn:aws:s3:::muybien-diary-photo/task/*"
       ]
     }
   ]

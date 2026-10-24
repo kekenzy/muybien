@@ -14,7 +14,7 @@ def visible_tasks_queryset(user) -> QuerySet:
     owned_ids = set(LabTask.objects.filter(owner=user).values_list('id', flat=True))
     shared_ids = set(LabTask.objects.filter(is_shared=True).values_list('id', flat=True))
     related_ids = _expand_linked_task_ids(shared_ids)
-    return LabTask.objects.filter(id__in=owned_ids | related_ids).prefetch_related('dependencies')
+    return LabTask.objects.filter(id__in=owned_ids | related_ids).prefetch_related('dependencies', 'photos')
 
 
 def _expand_linked_task_ids(seed_ids: set[int]) -> set[int]:

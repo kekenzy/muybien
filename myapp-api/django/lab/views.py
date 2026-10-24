@@ -33,7 +33,10 @@ from .invitations import (
     send_invite_email,
     send_password_reset_email,
 )
-from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission, UserProfile
+from .models import (
+    Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto,
+    Role, RoleMenuPermission, TaskPhoto, UserProfile,
+)
 from .ownership import owned_queryset, visible_tasks_queryset
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
@@ -48,6 +51,7 @@ from .serializers import (
     LabTaskSerializer,
     MemoSerializer,
     RoleSerializer,
+    TaskPhotoSerializer,
     UserAdminSerializer,
 )
 from .storage import save_bytes
@@ -382,6 +386,46 @@ class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
         if instance.owner_id != self.request.user.id:
             raise PermissionDenied('自分のタスクだけ削除できます。')
         instance.delete()
+
+
+class TaskPhotoUploadView(APIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'tasks'
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        task = get_object_or_404(visible_tasks_queryset(request.user), pk=pk)
+        if task.owner_id != request.user.id:
+            raise PermissionDenied('自分のタスクにだけ写真を追加できます。')
+        uploaded = request.FILES.get('file')
+        if uploaded is None:
+            return Response({'detail': 'file が必要です'}, status=status.HTTP_400_BAD_REQUEST)
+        if uploaded.size > 20 * 1024 * 1024:
+            return Response({'detail': '20MB以下の画像にしてください'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            data = _jpeg_bytes(uploaded)
+        except Exception:
+            return Response({'detail': '画像として読み込めませんでした'}, status=status.HTTP_400_BAD_REQUEST)
+        key = f'task/{task.pk}/{uuid.uuid4().hex}.jpg'
+        save_bytes(key, data, 'image/jpeg')
+        photo = TaskPhoto.objects.create(task=task, storage_key=key)
+        return Response(
+            TaskPhotoSerializer(photo, context={'request': request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class TaskPhotoDetailView(APIView):
+    permission_classes = [IsAuthenticated, MenuPermission]
+    menu_key = 'tasks'
+
+    def delete(self, request, pk, photo_id):
+        task = get_object_or_404(visible_tasks_queryset(request.user), pk=pk)
+        if task.owner_id != request.user.id:
+            raise PermissionDenied('自分のタスクの写真だけ削除できます。')
+        photo = get_object_or_404(TaskPhoto, pk=photo_id, task=task)
+        photo.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class DiaryListCreateView(generics.ListCreateAPIView):

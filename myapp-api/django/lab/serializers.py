@@ -4,7 +4,9 @@ from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission
+from .models import (
+    Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission, TaskPhoto,
+)
 from .ownership import visible_tasks_queryset
 from .storage import photo_url
 
@@ -39,18 +41,31 @@ class CustomerSerializer(serializers.ModelSerializer):
         return obj.user_id is not None
 
 
+class TaskPhotoSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TaskPhoto
+        fields = ['id', 'url', 'created_at']
+        read_only_fields = fields
+
+    def get_url(self, obj):
+        return photo_url(obj.storage_key, self.context.get('request'))
+
+
 class LabTaskSerializer(serializers.ModelSerializer):
     is_mine = serializers.SerializerMethodField()
     owner_username = serializers.CharField(source='owner.username', read_only=True)
+    photos = TaskPhotoSerializer(many=True, read_only=True)
 
     class Meta:
         model = LabTask
         fields = [
             'id', 'title', 'description', 'status', 'priority', 'start_date', 'due_date',
             'duration_days', 'progress', 'parent', 'order', 'dependencies',
-            'owner', 'owner_username', 'is_shared', 'is_mine', 'created_at', 'updated_at',
+            'owner', 'owner_username', 'is_shared', 'is_mine', 'photos', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'owner', 'owner_username', 'is_mine', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'owner', 'owner_username', 'is_mine', 'photos', 'created_at', 'updated_at']
         extra_kwargs = {'dependencies': {'required': False}}
 
     def __init__(self, *args, **kwargs):
