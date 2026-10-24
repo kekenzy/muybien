@@ -102,7 +102,7 @@
             >
               <div class="flex items-center gap-1 px-2 text-white/50 tabular-nums" :style="{ width: `${COLUMNS[0].width}px` }">
                 <span
-                  v-if="canEdit"
+                  v-if="canEdit && row.task.is_mine"
                   draggable="true"
                   class="cursor-grab px-0.5 text-base leading-none text-white/45 hover:text-white"
                   title="ドラッグで並べ替え"
@@ -128,6 +128,12 @@
                   :title="row.task.title"
                 >
                   {{ row.task.title }}
+                </span>
+                <span
+                  v-if="row.task.is_shared || !row.task.is_mine"
+                  class="ml-1 shrink-0 text-[10px] px-1 py-0.5 rounded bg-sky-500/20 text-sky-200"
+                >
+                  {{ row.task.is_mine ? '共有' : row.task.owner_username }}
                 </span>
                 <button
                   v-if="canEdit"
@@ -367,11 +373,12 @@ const summaryRanges = computed(() => {
 
 function barOf(row: TaskRow): Bar | null {
   const task = row.task
-  if (dragging.value?.id === task.id) return { start: dragging.value.start, end: dragging.value.end, editable: true }
+  const mine = task.is_mine
+  if (dragging.value?.id === task.id) return { start: dragging.value.start, end: dragging.value.end, editable: mine }
   if (task.start_date || task.due_date) {
     const start = task.start_date ?? task.due_date!
     const end = task.due_date ?? task.start_date!
-    return { start, end, editable: !!task.start_date && !!task.due_date }
+    return { start, end, editable: mine && !!task.start_date && !!task.due_date }
   }
   const summary = summaryRanges.value.get(task.id)
   return summary ? { ...summary, editable: false } : null
@@ -390,7 +397,7 @@ let dragState: { row: TaskRow; mode: DragMode; startX: number; start: string; en
 function onBarPointerDown(event: PointerEvent, row: TaskRow, mode: DragMode) {
   if (event.button !== 0) return
   const task = row.task
-  if (!props.canEdit || !task.start_date || !task.due_date) {
+  if (!props.canEdit || !task.is_mine || !task.start_date || !task.due_date) {
     if (mode === 'move') dragState = { row, mode, startX: event.clientX, start: '', end: '', moved: false }
     window.addEventListener('pointerup', onPointerUp, { once: true })
     return

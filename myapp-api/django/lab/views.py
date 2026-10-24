@@ -18,7 +18,7 @@ from portal.serializers import (
     ReservationSettingsSerializer,
 )
 from rest_framework import generics, status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -33,6 +33,7 @@ from .invitations import (
     send_password_reset_email,
 )
 from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission, UserProfile
+from .ownership import owned_queryset, visible_tasks_queryset
 from .permissions import MenuPermission, get_all_menu_levels
 from .serializers import (
     ContactAdminSerializer,
@@ -337,14 +338,31 @@ class TaskListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'tasks'
     serializer_class = LabTaskSerializer
-    queryset = LabTask.objects.prefetch_related('dependencies')
+
+    def get_queryset(self):
+        return visible_tasks_queryset(self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'tasks'
     serializer_class = LabTaskSerializer
-    queryset = LabTask.objects.prefetch_related('dependencies')
+
+    def get_queryset(self):
+        return visible_tasks_queryset(self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.owner_id != self.request.user.id:
+            raise PermissionDenied('自分のタスクだけ編集できます。')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.owner_id != self.request.user.id:
+            raise PermissionDenied('自分のタスクだけ削除できます。')
+        instance.delete()
 
 
 class DiaryListCreateView(generics.ListCreateAPIView):
@@ -353,7 +371,7 @@ class DiaryListCreateView(generics.ListCreateAPIView):
     serializer_class = DiaryEntrySerializer
 
     def get_queryset(self):
-        queryset = DiaryEntry.objects.prefetch_related('photos')
+        queryset = owned_queryset(DiaryEntry.objects.prefetch_related('photos'), self.request.user)
         year = self.request.query_params.get('year')
         month = self.request.query_params.get('month')
         if year:
@@ -362,12 +380,17 @@ class DiaryListCreateView(generics.ListCreateAPIView):
             queryset = queryset.filter(date__month=month)
         return queryset
 
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
 
 class DiaryDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'diary'
     serializer_class = DiaryEntrySerializer
-    queryset = DiaryEntry.objects.prefetch_related('photos')
+
+    def get_queryset(self):
+        return owned_queryset(DiaryEntry.objects.prefetch_related('photos'), self.request.user)
 
 
 def _jpeg_bytes(uploaded):
@@ -385,7 +408,7 @@ class DiaryPhotoUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, pk):
-        diary = get_object_or_404(DiaryEntry, pk=pk)
+        diary = get_object_or_404(DiaryEntry, pk=pk, owner=request.user)
         uploaded = request.FILES.get('file')
         if uploaded is None:
             return Response({'detail': 'file が必要です'}, status=status.HTTP_400_BAD_REQUEST)
@@ -409,7 +432,7 @@ class DiaryPhotoDetailView(APIView):
     menu_key = 'diary'
 
     def delete(self, request, pk, photo_id):
-        photo = get_object_or_404(DiaryPhoto, pk=photo_id, diary_id=pk)
+        photo = get_object_or_404(DiaryPhoto, pk=photo_id, diary_id=pk, diary__owner=request.user)
         photo.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -418,14 +441,21 @@ class MemoListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'memo'
     serializer_class = MemoSerializer
-    queryset = Memo.objects.prefetch_related('photos')
+
+    def get_queryset(self):
+        return owned_queryset(Memo.objects.prefetch_related('photos'), self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class MemoDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'memo'
     serializer_class = MemoSerializer
-    queryset = Memo.objects.prefetch_related('photos')
+
+    def get_queryset(self):
+        return owned_queryset(Memo.objects.prefetch_related('photos'), self.request.user)
 
 
 class MemoPhotoUploadView(APIView):
@@ -434,7 +464,7 @@ class MemoPhotoUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, pk):
-        memo = get_object_or_404(Memo, pk=pk)
+        memo = get_object_or_404(Memo, pk=pk, owner=request.user)
         uploaded = request.FILES.get('file')
         if uploaded is None:
             return Response({'detail': 'file が必要です'}, status=status.HTTP_400_BAD_REQUEST)
@@ -458,7 +488,7 @@ class MemoPhotoDetailView(APIView):
     menu_key = 'memo'
 
     def delete(self, request, pk, photo_id):
-        photo = get_object_or_404(MemoPhoto, pk=photo_id, memo_id=pk)
+        photo = get_object_or_404(MemoPhoto, pk=photo_id, memo_id=pk, memo__owner=request.user)
         photo.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -467,14 +497,21 @@ class DailyItemListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'daily'
     serializer_class = DailyItemSerializer
-    queryset = DailyItem.objects.all()
+
+    def get_queryset(self):
+        return owned_queryset(DailyItem.objects.all(), self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class DailyItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]
     menu_key = 'daily'
     serializer_class = DailyItemSerializer
-    queryset = DailyItem.objects.all()
+
+    def get_queryset(self):
+        return owned_queryset(DailyItem.objects.all(), self.request.user)
 
 
 class DailyCheckListView(generics.ListAPIView):
@@ -483,7 +520,7 @@ class DailyCheckListView(generics.ListAPIView):
     serializer_class = DailyCheckSerializer
 
     def get_queryset(self):
-        queryset = DailyCheck.objects.all()
+        queryset = DailyCheck.objects.filter(item__owner=self.request.user)
         year = self.request.query_params.get('year')
         month = self.request.query_params.get('month')
         if year:
@@ -500,7 +537,7 @@ class DailyCheckToggleView(APIView):
     menu_key = 'daily'
 
     def post(self, request):
-        serializer = DailyCheckToggleSerializer(data=request.data)
+        serializer = DailyCheckToggleSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         item = serializer.validated_data['item']
         date = serializer.validated_data['date']
@@ -510,7 +547,6 @@ class DailyCheckToggleView(APIView):
             return Response({'item': item.id, 'date': date.isoformat(), 'checked': False})
         DailyCheck.objects.get_or_create(item=item, date=date)
         return Response({'item': item.id, 'date': date.isoformat(), 'checked': True})
-
 
 class UserListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated, MenuPermission]

@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import Customer, DailyCheck, DailyItem, DiaryEntry, DiaryPhoto, LabTask, Memo, MemoPhoto, Role, RoleMenuPermission
+from .ownership import visible_tasks_queryset
 from .storage import photo_url
 
 User = get_user_model()
@@ -39,14 +40,30 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 class LabTaskSerializer(serializers.ModelSerializer):
+    is_mine = serializers.SerializerMethodField()
+    owner_username = serializers.CharField(source='owner.username', read_only=True)
+
     class Meta:
         model = LabTask
         fields = [
             'id', 'title', 'description', 'status', 'priority', 'start_date', 'due_date',
-            'duration_days', 'progress', 'parent', 'order', 'dependencies', 'created_at', 'updated_at',
+            'duration_days', 'progress', 'parent', 'order', 'dependencies',
+            'owner', 'owner_username', 'is_shared', 'is_mine', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'owner', 'owner_username', 'is_mine', 'created_at', 'updated_at']
         extra_kwargs = {'dependencies': {'required': False}}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and getattr(request.user, 'is_authenticated', False):
+            qs = visible_tasks_queryset(request.user)
+            self.fields['parent'].queryset = qs
+            self.fields['dependencies'].child_relation.queryset = qs
+
+    def get_is_mine(self, obj):
+        request = self.context.get('request')
+        return bool(request and request.user and obj.owner_id == request.user.id)
 
     def validate(self, attrs):
         start = attrs.get('start_date', getattr(self.instance, 'start_date', None))
@@ -131,6 +148,12 @@ class DailyCheckSerializer(serializers.ModelSerializer):
 class DailyCheckToggleSerializer(serializers.Serializer):
     item = serializers.PrimaryKeyRelatedField(queryset=DailyItem.objects.all())
     date = serializers.DateField()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            self.fields['item'].queryset = DailyItem.objects.filter(owner=request.user)
 
 
 class UserAdminSerializer(serializers.ModelSerializer):

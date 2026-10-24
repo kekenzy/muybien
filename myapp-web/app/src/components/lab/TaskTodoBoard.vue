@@ -34,7 +34,7 @@
             <div
               v-for="task in column.tasks"
               :key="task.id"
-              :draggable="canEdit"
+              :draggable="canEdit && task.is_mine"
               class="rounded-xl border border-white/10 bg-[#0c1220] p-3 cursor-pointer hover:border-white/30 transition-colors"
               :class="draggingId === task.id ? 'opacity-40' : ''"
               @dragstart="onDragStart($event, task)"
@@ -44,6 +44,12 @@
               <div class="flex items-center gap-1.5 mb-1.5">
                 <span class="text-[10px] px-1.5 py-0.5 rounded" :class="priorityMeta(task.priority).badge">
                   {{ priorityMeta(task.priority).label }}
+                </span>
+                <span
+                  v-if="task.is_shared || !task.is_mine"
+                  class="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-200"
+                >
+                  {{ task.is_mine ? '共有' : task.owner_username }}
                 </span>
                 <span v-if="parentTitle(task)" class="text-[10px] text-white/40 truncate">↳ {{ parentTitle(task) }}</span>
               </div>
@@ -86,12 +92,20 @@
                 type="checkbox"
                 class="accent-primary"
                 :checked="task.status === 'done'"
-                :disabled="!canEdit"
+                :disabled="!canEdit || !task.is_mine"
                 @change="emit('move', task, task.status === 'done' ? 'todo' : 'done')"
               />
             </td>
             <td class="px-4 py-3 max-w-[320px] truncate" :class="task.status === 'done' ? 'line-through text-white/50' : ''">
-              {{ task.title }}
+              <span class="inline-flex items-center gap-1.5">
+                {{ task.title }}
+                <span
+                  v-if="task.is_shared || !task.is_mine"
+                  class="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-200 shrink-0"
+                >
+                  {{ task.is_mine ? '共有' : task.owner_username }}
+                </span>
+              </span>
             </td>
             <td class="px-4 py-3">
               <span class="text-xs px-2 py-0.5 rounded" :class="priorityMeta(task.priority).badge">{{ priorityMeta(task.priority).label }}</span>
@@ -193,6 +207,10 @@ function formatShort(value: string): string {
 }
 
 function onDragStart(event: DragEvent, task: LabTask) {
+  if (!props.canEdit || !task.is_mine) {
+    event.preventDefault()
+    return
+  }
   draggingId.value = task.id
   // Firefox はデータを積まないとドラッグが始まらない
   event.dataTransfer?.setData('text/plain', String(task.id))

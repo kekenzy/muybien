@@ -113,6 +113,17 @@ class LabTask(models.Model):
     dependencies = models.ManyToManyField(
         'self', verbose_name='先行タスク', symmetrical=False, blank=True, related_name='dependent_tasks',
     )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name='所有者',
+        related_name='lab_tasks',
+        on_delete=models.CASCADE,
+    )
+    is_shared = models.BooleanField(
+        '共有',
+        default=False,
+        help_text='ONにすると、紐づく親・子・先行/後続タスクも含めて他のLabユーザーに見える',
+    )
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
     updated_at = models.DateTimeField('更新日時', auto_now=True)
 
@@ -161,7 +172,13 @@ class Customer(models.Model):
 
 
 class DiaryEntry(models.Model):
-    date = models.DateField('日付', unique=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name='所有者',
+        related_name='diary_entries',
+        on_delete=models.CASCADE,
+    )
+    date = models.DateField('日付', db_index=True)
     title = models.CharField('タイトル', max_length=200, blank=True)
     content = models.TextField('本文')
     created_at = models.DateTimeField('作成日時', auto_now_add=True)
@@ -171,6 +188,7 @@ class DiaryEntry(models.Model):
         verbose_name = '日記'
         verbose_name_plural = '日記'
         ordering = ['-date']
+        unique_together = ('owner', 'date')
 
     def __str__(self):
         return f'{self.date}'
@@ -203,6 +221,12 @@ def _remove_diary_photo_file(sender, instance, **kwargs):
 
 
 class Memo(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name='所有者',
+        related_name='memos',
+        on_delete=models.CASCADE,
+    )
     date = models.DateField('日付', null=True, blank=True, db_index=True)
     title = models.CharField('タイトル', max_length=200, blank=True)
     content = models.TextField('本文', blank=True)
@@ -256,6 +280,12 @@ class DailyItem(models.Model):
         ('check', '✔'),
     ]
 
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name='所有者',
+        related_name='daily_items',
+        on_delete=models.CASCADE,
+    )
     title = models.CharField('タイトル', max_length=100)
     color = models.CharField('色', max_length=7, default='#facc15')
     mark = models.CharField('印', max_length=10, choices=MARK_CHOICES, default='star')

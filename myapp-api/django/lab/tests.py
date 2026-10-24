@@ -12,7 +12,8 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework.test import APIClient
 
 from .invitations import password_reset_token_generator
-from .models import Customer, Role, RoleMenuPermission, UserProfile
+from .models import Customer, DiaryEntry, LabTask, Memo, Role, RoleMenuPermission, UserProfile
+from .ownership import visible_tasks_queryset
 
 User = get_user_model()
 
@@ -210,3 +211,42 @@ class PasswordResetTests(TestCase):
         now = password_reset_token_generator._now()
         with mock.patch.object(password_reset_token_generator, '_now', return_value=now + timedelta(hours=2)):
             self.assertEqual(self._confirm(uid, token).status_code, 400)
+
+
+class OwnershipScopeTests(TestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user(username='alice', password='password123', is_staff=True)
+        self.bob = User.objects.create_user(username='bob', password='password123', is_staff=True)
+        self.client = APIClient()
+
+    def test_diary_is_private_per_user(self):
+        DiaryEntry.objects.create(owner=self.alice, date='2026-01-01', content='alice')
+        DiaryEntry.objects.create(owner=self.bob, date='2026-01-01', content='bob')
+        self.client.force_authenticate(user=self.alice)
+        response = self.client.get('/v1/api/lab/diaries')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]['content'], 'alice')
+
+    def test_memo_is_private_per_user(self):
+        Memo.objects.create(owner=self.alice, title='a')
+        Memo.objects.create(owner=self.bob, title='b')
+        self.client.force_authenticate(user=self.alice)
+        response = self.client.get('/v1/api/lab/memos')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([m['title'] for m in response.json()], ['a'])
+
+    def test_shared_task_exposes_linked_tree(self):
+        parent = LabTask.objects.create(owner=self.alice, title='parent', is_shared=True)
+        child = LabTask.objects.create(owner=self.alice, title='child', parent=parent)
+        private = LabTask.objects.create(owner=self.alice, title='secret')
+        visible = visible_tasks_queryset(self.bob)
+        titles = set(visible.values_list('title', flat=True))
+        self.assertEqual(titles, {'parent', 'child'})
+        self.assertNotIn(private.id, visible.values_list('id', flat=True))
+
+    def test_cannot_edit_others_shared_task(self):
+        task = LabTask.objects.create(owner=self.alice, title='shared', is_shared=True)
+        self.client.force_authenticate(user=self.bob)
+        response = self.client.patch(f'/v1/api/lab/tasks/{task.id}', {'title': 'hacked'}, format='json')
+        self.assertEqual(response.status_code, 403)

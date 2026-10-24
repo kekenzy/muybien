@@ -141,6 +141,10 @@ export interface LabTask {
   parent: number | null
   order: number
   dependencies: number[]
+  owner: number
+  owner_username: string
+  is_shared: boolean
+  is_mine: boolean
   created_at: string
   updated_at: string
 }
@@ -157,6 +161,7 @@ export interface LabTaskInput {
   parent: number | null
   order: number
   dependencies: number[]
+  is_shared: boolean
 }
 
 export interface DiaryPhoto {

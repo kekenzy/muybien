@@ -102,6 +102,10 @@ class Task {
   final int? parentId;
   final int order;
   final List<int> dependencies;
+  final int? ownerId;
+  final String ownerUsername;
+  final bool isShared;
+  final bool isMine;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -118,6 +122,10 @@ class Task {
     this.parentId,
     this.order = 0,
     this.dependencies = const [],
+    this.ownerId,
+    this.ownerUsername = '',
+    this.isShared = false,
+    this.isMine = true,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -139,6 +147,10 @@ class Task {
       parentId: updateParent ? parentId : this.parentId,
       order: order ?? this.order,
       dependencies: dependencies,
+      ownerId: ownerId,
+      ownerUsername: ownerUsername,
+      isShared: isShared,
+      isMine: isMine,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -164,6 +176,10 @@ class Task {
       parentId: json['parent'] as int?,
       order: (json['order'] as int?) ?? 0,
       dependencies: ((json['dependencies'] as List?) ?? const []).cast<int>(),
+      ownerId: json['owner'] as int?,
+      ownerUsername: (json['owner_username'] as String?) ?? '',
+      isShared: (json['is_shared'] as bool?) ?? false,
+      isMine: (json['is_mine'] as bool?) ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );

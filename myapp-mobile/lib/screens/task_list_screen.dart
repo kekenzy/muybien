@@ -47,7 +47,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _moveStatus(Task task, TaskStatus status) async {
-    if (task.status == status) return;
+    if (!task.isMine || task.status == status) return;
     try {
       await ApiClient.instance.updateTask(
         task.id,
@@ -66,6 +66,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _toggleDone(Task task) async {
+    if (!task.isMine) return;
     final done = task.status == TaskStatus.done;
     try {
       // Web のカンバンと同じく、完了にしたら進捗も100%にする
@@ -300,6 +301,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   Row(
                     children: [
                       _badge(task.priority.label, _priorityColor(task.priority)),
+                      if (task.isShared || !task.isMine) ...[
+                        const SizedBox(width: 6),
+                        _badge(task.isMine ? '共有' : task.ownerUsername, Colors.lightBlue.shade700),
+                      ],
                       if (task.dueDate != null) ...[
                         const SizedBox(width: 6),
                         Icon(Icons.event, size: 12, color: _isOverdue(task) ? Colors.red.shade400 : muted),
@@ -346,6 +351,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
         ),
       ),
     );
+    if (!task.isMine) return card;
     return LongPressDraggable<Task>(
       data: task,
       onDragStarted: () => setState(() => _dragging = task),
@@ -382,6 +388,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     final draggedIndex = tasks.indexWhere((t) => t.id == draggedId);
     final targetIndex = tasks.indexWhere((t) => t.id == targetId);
     if (draggedIndex < 0 || targetIndex < 0) return;
+    if (!tasks[draggedIndex].isMine) return;
     final target = tasks[targetIndex];
 
     final parentId = target.parentId;
@@ -448,6 +455,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
       taskId: task.id,
       title: task.title.isEmpty ? '(無題)' : task.title,
       tasks: tasks,
+      canDrag: task.isMine,
       highlighted: highlighted,
       dropAfter: highlighted && drop!.after,
       onDragStarted: () => setState(() => _wbsDrop = null),
@@ -565,6 +573,7 @@ class _WbsDragRow extends StatelessWidget {
   final int taskId;
   final String title;
   final List<Task> tasks;
+  final bool canDrag;
   final bool highlighted;
   final bool dropAfter;
   final VoidCallback onDragStarted;
@@ -577,6 +586,7 @@ class _WbsDragRow extends StatelessWidget {
     required this.taskId,
     required this.title,
     required this.tasks,
+    required this.canDrag,
     required this.highlighted,
     required this.dropAfter,
     required this.onDragStarted,
@@ -597,7 +607,7 @@ class _WbsDragRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return DragTarget<int>(
       onWillAcceptWithDetails: (details) {
-        if (details.data == taskId) return false;
+        if (!canDrag || details.data == taskId) return false;
         return !descendantIds(tasks, details.data).contains(taskId);
       },
       onMove: (details) => onHover(_after(context, details.offset)),
@@ -612,29 +622,32 @@ class _WbsDragRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              LongPressDraggable<int>(
-                data: taskId,
-                delay: const Duration(milliseconds: 180),
-                onDragStarted: onDragStarted,
-                onDragEnd: (_) => onDragEnded(),
-                feedback: Material(
-                  color: Colors.transparent,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 240),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (canDrag)
+                LongPressDraggable<int>(
+                  data: taskId,
+                  delay: const Duration(milliseconds: 180),
+                  onDragStarted: onDragStarted,
+                  onDragEnd: (_) => onDragEnded(),
+                  feedback: Material(
+                    color: Colors.transparent,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 240),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                childWhenDragging: Icon(Icons.drag_handle, size: 18, color: scheme.onSurfaceVariant.withValues(alpha: 0.3)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Icon(Icons.drag_handle, size: 18, color: scheme.onSurfaceVariant),
-                ),
-              ),
+                  childWhenDragging: Icon(Icons.drag_handle, size: 18, color: scheme.onSurfaceVariant.withValues(alpha: 0.3)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Icon(Icons.drag_handle, size: 18, color: scheme.onSurfaceVariant),
+                  ),
+                )
+              else
+                const SizedBox(width: 22),
               Expanded(child: child),
             ],
           ),

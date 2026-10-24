@@ -24,6 +24,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   DateTime? _startDate;
   DateTime? _dueDate;
   int _progress = 0;
+  bool _isShared = false;
 
   Task? _original;
   List<Task> _allTasks = [];
@@ -32,6 +33,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   bool _saving = false;
 
   bool get _isEditing => widget.task != null;
+  bool get _canEdit => !_isEditing || (_original?.isMine ?? true);
 
   @override
   void initState() {
@@ -70,6 +72,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
           _startDate = original.startDate;
           _dueDate = original.dueDate;
           _progress = original.progress;
+          _isShared = original.isShared;
         }
         _loading = false;
       });
@@ -119,6 +122,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   }
 
   Future<void> _save() async {
+    if (!_canEdit) return;
     if (_titleController.text.trim().isEmpty) {
       _showSnack('タイトルを入力してください');
       return;
@@ -139,6 +143,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
           'parent': _parentId,
           'order': _nextOrder(_parentId),
           'progress': _progress,
+          'is_shared': _isShared,
           ..._dateFields(),
         });
       } else {
@@ -149,6 +154,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
         if (_status != original.status) fields['status'] = _status.apiValue;
         if (_priority != original.priority) fields['priority'] = _priority.apiValue;
         if (_progress != original.progress) fields['progress'] = _progress;
+        if (_isShared != original.isShared) fields['is_shared'] = _isShared;
         if (_parentId != original.parentId) {
           fields['parent'] = _parentId;
           fields['order'] = _nextOrder(_parentId);
@@ -167,6 +173,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   }
 
   Future<void> _delete() async {
+    if (!_canEdit) return;
     final childCount = descendantIds(_allTasks, widget.task!.id).length - 1;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -277,9 +284,9 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'タスクを編集' : '新規タスク'),
+        title: Text(_isEditing ? (_canEdit ? 'タスクを編集' : 'タスク（閲覧）') : '新規タスク'),
         actions: [
-          if (_isEditing && !_loading && _loadError == null)
+          if (_isEditing && _canEdit && !_loading && _loadError == null)
             IconButton(onPressed: _saving ? null : _delete, icon: const Icon(Icons.delete_outline)),
         ],
       ),
@@ -314,25 +321,44 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
+                if (!_canEdit && _original != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      '${_original!.ownerUsername} さんの共有タスク（閲覧のみ）',
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ),
                 TextField(
                   controller: _titleController,
+                  readOnly: !_canEdit,
                   style: const TextStyle(fontSize: 14),
                   decoration: const InputDecoration(labelText: 'タイトル', border: OutlineInputBorder(), isDense: true),
                 ),
                 const SizedBox(height: 12),
                 _label('ステータス'),
-                _buildStatusSelector(),
+                IgnorePointer(ignoring: !_canEdit, child: Opacity(opacity: _canEdit ? 1 : 0.6, child: _buildStatusSelector())),
                 const SizedBox(height: 12),
                 _label('優先度'),
-                Align(alignment: Alignment.centerLeft, child: _buildPrioritySelector()),
+                IgnorePointer(
+                  ignoring: !_canEdit,
+                  child: Opacity(opacity: _canEdit ? 1 : 0.6, child: Align(alignment: Alignment.centerLeft, child: _buildPrioritySelector())),
+                ),
                 const SizedBox(height: 12),
                 _label('親タスク'),
-                _buildParentSelector(),
+                IgnorePointer(ignoring: !_canEdit, child: Opacity(opacity: _canEdit ? 1 : 0.6, child: _buildParentSelector())),
                 const SizedBox(height: 12),
                 _label(duration != null ? '日程（期間 $duration 稼働日）' : '日程'),
-                _buildDateButton('開始日', _startDate, (v) => setState(() => _startDate = v)),
-                const SizedBox(height: 6),
-                _buildDateButton('終了日', _dueDate, (v) => setState(() => _dueDate = v)),
+                IgnorePointer(
+                  ignoring: !_canEdit,
+                  child: Column(
+                    children: [
+                      _buildDateButton('開始日', _startDate, (v) => setState(() => _startDate = v)),
+                      const SizedBox(height: 6),
+                      _buildDateButton('終了日', _dueDate, (v) => setState(() => _dueDate = v)),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 _label('進捗 $_progress%'),
                 Slider(
@@ -341,11 +367,19 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
                   max: 100,
                   divisions: 20,
                   label: '$_progress%',
-                  onChanged: (v) => setState(() => _progress = v.round()),
+                  onChanged: _canEdit ? (v) => setState(() => _progress = v.round()) : null,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('他のLabユーザーと共有', style: TextStyle(fontSize: 14)),
+                  subtitle: const Text('親・子・先行/後続に紐づくタスクも相手に見えます', style: TextStyle(fontSize: 11)),
+                  value: _isShared,
+                  onChanged: _canEdit ? (v) => setState(() => _isShared = v) : null,
                 ),
                 const SizedBox(height: 4),
                 TextField(
                   controller: _descriptionController,
+                  readOnly: !_canEdit,
                   style: const TextStyle(fontSize: 14),
                   decoration: const InputDecoration(
                     labelText: '詳細',
@@ -359,19 +393,20 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                style: FilledButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(vertical: 10)),
-                onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('保存'),
+          if (_canEdit)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(vertical: 10)),
+                  onPressed: _saving ? null : _save,
+                  child: _saving
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('保存'),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

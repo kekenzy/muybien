@@ -55,7 +55,7 @@
     <div
       v-if="showDialog"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      @click.self="closeDialog"
+      @click.self="requestClose"
     >
       <div
         class="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0c1220] p-8 space-y-4"
@@ -63,7 +63,7 @@
       >
         <div class="flex items-center justify-between">
           <h3 class="font-semibold text-base">{{ editing ? 'メモを編集' : 'メモを追加' }}</h3>
-          <button type="button" class="text-white/60 hover:text-white" @click="closeDialog">✕</button>
+          <button type="button" class="text-white/60 hover:text-white" @click="requestClose">✕</button>
         </div>
         <label class="block text-xs text-white/60">
           日付
@@ -139,7 +139,7 @@
           </button>
           <span v-else />
           <div class="flex gap-2">
-            <button type="button" class="text-xs text-white/60 hover:text-white" @click="closeDialog">キャンセル</button>
+            <button type="button" class="text-xs text-white/60 hover:text-white" @click="requestClose">キャンセル</button>
             <button
               type="button"
               class="text-sm px-4 py-2 rounded-full bg-primary text-black font-medium disabled:opacity-50"
@@ -179,6 +179,7 @@ const errorMsg = ref('')
 const showDialog = ref(false)
 const editing = ref<Memo | null>(null)
 const form = reactive({ date: '', title: '', content: '' })
+const initialForm = ref({ date: '', title: '', content: '' })
 const cameraInput = ref<HTMLInputElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const pendingFiles = ref<File[]>([])
@@ -192,6 +193,15 @@ const keptPhotos = computed<DiaryPhoto[]>(() =>
 
 // 保存済み・追加予定を並び順どおりにまとめ、ビューアで続けて見られるようにする
 const dialogPhotoUrls = computed(() => [...keptPhotos.value.map((photo) => photo.url), ...pendingUrls.value])
+
+const isDirty = computed(
+  () =>
+    form.date !== initialForm.value.date ||
+    form.title !== initialForm.value.title ||
+    form.content !== initialForm.value.content ||
+    pendingFiles.value.length > 0 ||
+    removedPhotoIds.value.length > 0,
+)
 
 function openViewer(urls: string[], index: number) {
   viewer.value = { urls, index }
@@ -224,6 +234,7 @@ function startNew() {
   form.date = todayIso()
   form.title = ''
   form.content = ''
+  initialForm.value = { ...form }
   removedPhotoIds.value = []
   clearPending()
   showDialog.value = true
@@ -234,6 +245,7 @@ function startEdit(memo: Memo) {
   form.date = memoDay(memo)
   form.title = memo.title
   form.content = memo.content
+  initialForm.value = { ...form }
   removedPhotoIds.value = []
   clearPending()
   showDialog.value = true
@@ -242,6 +254,12 @@ function startEdit(memo: Memo) {
 function closeDialog() {
   showDialog.value = false
   clearPending()
+}
+
+// 入力途中の内容を誤って捨てないよう、変更があれば閉じる前に確認する
+function requestClose() {
+  if (isDirty.value && !confirm('保存していない変更があります。破棄して閉じますか？')) return
+  closeDialog()
 }
 
 function removePending(index: number) {

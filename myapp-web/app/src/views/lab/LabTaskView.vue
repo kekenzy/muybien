@@ -82,7 +82,7 @@
       :task="editingTask"
       :tasks="tasks"
       :defaults="formDefaults"
-      :readonly="!canWrite('tasks')"
+      :readonly="!canEditTask(editingTask)"
       :saving="saving"
       @close="closeForm"
       @submit="submitForm"
@@ -170,6 +170,12 @@ function nextOrder(parentId: number | null): number {
   return siblings.reduce((max, t) => Math.max(max, t.order), 0) + 1
 }
 
+function canEditTask(task: LabTask | null): boolean {
+  if (!canWrite('tasks')) return false
+  if (!task) return true
+  return task.is_mine
+}
+
 function openCreate(parent?: LabTask) {
   editingTask.value = null
   formDefaults.value = parent ? { parent: parent.id, start_date: parent.start_date } : {}
@@ -192,6 +198,8 @@ async function applyCascade(sourceId: number, oldDue: string | null, newDue: str
   if (!oldDue || !newDue) return
   const changes = cascadeDependents(tasks.value, sourceId, diffDays(oldDue, newDue))
   for (const change of changes) {
+    const target = tasks.value.find((t) => t.id === change.id)
+    if (!target?.is_mine) continue
     replaceTask(await updateTask(change.id, { start_date: change.start_date, due_date: change.due_date }))
   }
 }
@@ -220,6 +228,7 @@ async function submitForm(input: LabTaskInput) {
 }
 
 async function moveStatus(task: LabTask, status: TaskStatus) {
+  if (!canEditTask(task)) return
   const previous = { ...task }
   const patch: Partial<LabTaskInput> = { status }
   if (status === 'done') patch.progress = 100
@@ -233,6 +242,7 @@ async function moveStatus(task: LabTask, status: TaskStatus) {
 }
 
 async function reschedule(task: LabTask, change: ScheduleChange) {
+  if (!canEditTask(task)) return
   errorMsg.value = ''
   try {
     const updated = await updateTask(task.id, change)
@@ -244,11 +254,12 @@ async function reschedule(task: LabTask, change: ScheduleChange) {
 }
 
 async function reorder(task: LabTask, parentId: number | null, orderedIds: number[]) {
+  if (!canEditTask(task)) return
   errorMsg.value = ''
   try {
     for (const [i, id] of orderedIds.entries()) {
       const target = tasks.value.find((t) => t.id === id)
-      if (!target) continue
+      if (!target?.is_mine) continue
       const patch: Partial<LabTaskInput> = {}
       if (target.order !== i + 1) patch.order = i + 1
       if (id === task.id && target.parent !== parentId) patch.parent = parentId
@@ -261,6 +272,7 @@ async function reorder(task: LabTask, parentId: number | null, orderedIds: numbe
 }
 
 async function removeDependency(task: LabTask, predecessorId: number) {
+  if (!canEditTask(task)) return
   const predecessor = tasks.value.find((t) => t.id === predecessorId)
   if (!confirm(`「${predecessor?.title ?? ''}」→「${task.title}」の依存関係を解除しますか？`)) return
   try {

@@ -5,9 +5,10 @@ from .models import Customer, DailyItem, DiaryEntry, LabTask, Role, RoleMenuPerm
 
 @admin.register(LabTask)
 class LabTaskAdmin(admin.ModelAdmin):
-    list_display = ['title', 'status', 'priority', 'start_date', 'due_date', 'progress', 'parent']
-    list_filter = ['status', 'priority']
-    search_fields = ['title', 'description']
+    list_display = ['title', 'owner', 'is_shared', 'status', 'priority', 'start_date', 'due_date', 'progress', 'parent']
+    list_filter = ['status', 'priority', 'is_shared']
+    search_fields = ['title', 'description', 'owner__username']
+    raw_id_fields = ['owner', 'parent']
 
 
 @admin.register(Customer)
@@ -36,11 +37,13 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(DiaryEntry)
 class DiaryEntryAdmin(admin.ModelAdmin):
-    list_display = ['date', 'title', 'created_at']
-    search_fields = ['title', 'content']
+    list_display = ['date', 'owner', 'title', 'created_at']
+    search_fields = ['title', 'content', 'owner__username']
+    raw_id_fields = ['owner']
 
 
 @admin.register(DailyItem)
 class DailyItemAdmin(admin.ModelAdmin):
-    list_display = ['title', 'mark', 'color', 'order', 'is_active']
+    list_display = ['title', 'owner', 'mark', 'color', 'order', 'is_active']
     list_filter = ['is_active']
+    raw_id_fields = ['owner']

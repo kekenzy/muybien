@@ -104,6 +104,24 @@
             <input v-model.number="form.progress" type="range" min="0" max="100" step="5" :disabled="readonly" class="w-full accent-primary" />
           </div>
 
+          <label class="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              v-model="form.is_shared"
+              type="checkbox"
+              class="mt-0.5 accent-primary"
+              :disabled="readonly || (task != null && !task.is_mine)"
+            />
+            <span>
+              <span class="block text-xs text-white/80">他のLabユーザーと共有</span>
+              <span class="block text-[11px] text-white/40 mt-0.5">
+                共有すると、親・子・先行/後続に紐づくタスクも相手に見えます
+              </span>
+            </span>
+          </label>
+
+          <p v-if="task && !task.is_mine" class="text-xs text-amber-200/80">
+            {{ task.owner_username }} さんの共有タスク（閲覧のみ）
+          </p>
           <p v-if="dateError" class="text-xs text-red-300">{{ dateError }}</p>
         </div>
       </div>
@@ -184,6 +202,7 @@ const form = reactive<LabTaskInput>({
   parent: source?.parent ?? null,
   order: source?.order ?? 0,
   dependencies: [...(source?.dependencies ?? [])],
+  is_shared: source?.is_shared ?? false,
   ...props.defaults,
 })
 

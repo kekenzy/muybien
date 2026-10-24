@@ -54,12 +54,12 @@
     <div
       v-if="showDialog"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      @click.self="closeDialog"
+      @click.self="requestClose"
     >
       <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0c1220] p-8 space-y-5">
         <div class="flex items-center justify-between">
           <h3 class="font-semibold text-base">{{ selectedDate }}</h3>
-          <button type="button" class="text-white/60 hover:text-white transition-colors" @click="closeDialog">
+          <button type="button" class="text-white/60 hover:text-white transition-colors" @click="requestClose">
             ✕
           </button>
         </div>
@@ -195,6 +195,14 @@ const keptPhotos = computed<DiaryPhoto[]>(() =>
   (selectedDiary.value?.photos ?? []).filter((photo) => !removedPhotoIds.value.includes(photo.id)),
 )
 
+const isDirty = computed(
+  () =>
+    form.title !== (selectedDiary.value?.title ?? '') ||
+    form.content !== (selectedDiary.value?.content ?? '') ||
+    pendingFiles.value.length > 0 ||
+    removedPhotoIds.value.length > 0,
+)
+
 interface CalendarDay {
   date: Date
   iso: string
@@ -309,6 +317,12 @@ function selectDay(iso: string) {
 
 function closeDialog() {
   showDialog.value = false
+}
+
+// 入力途中の内容を誤って捨てないよう、変更があれば閉じる前に確認する
+function requestClose() {
+  if (isDirty.value && !confirm('保存していない変更があります。破棄して閉じますか？')) return
+  closeDialog()
 }
 
 async function loadCalendarData() {
