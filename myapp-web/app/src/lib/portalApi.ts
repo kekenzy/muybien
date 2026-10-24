@@ -17,7 +17,8 @@ portalApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config
-    if (error.response?.status !== 401 || original._retry) {
+    // ログインの401はパスワード違いなので、トークン更新やリダイレクトをせずに画面へ返す
+    if (error.response?.status !== 401 || original._retry || original.url === '/auth/login') {
       return Promise.reject(error)
     }
 
