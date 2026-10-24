@@ -6,6 +6,7 @@ from contact.models import ContactMessage
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from PIL import Image, ImageOps
@@ -18,7 +19,7 @@ from portal.serializers import (
     ReservationSettingsSerializer,
 )
 from rest_framework import generics, status
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -62,6 +63,21 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 MIN_PASSWORD_LENGTH = 8
+
+
+class InviteEmailFailed(APIException):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    default_detail = '招待メールの送信に失敗しました。メールアドレスを確認してください。'
+    default_code = 'invite_email_failed'
+
+
+def _send_invite_or_fail(send, user, **kwargs):
+    """招待メールを送り、失敗したらInviteEmailFailedにする（atomic内なら作成もロールバックされる）"""
+    try:
+        send(user, **kwargs)
+    except Exception:
+        logger.exception('招待メールの送信に失敗しました (user_id=%s)', user.pk)
+        raise InviteEmailFailed()
 PASSWORD_RESET_EMAIL_COOLDOWN_SECONDS = 5 * 60
 
 
@@ -308,7 +324,8 @@ class CustomerInviteView(APIView):
 
         # 既存アカウントなら招待メールを再送（パスワード未設定・リンク切れの救済）
         if customer.user_id:
-            resend_invite_email(
+            _send_invite_or_fail(
+                resend_invite_email,
                 customer.user,
                 intro=f'{customer.name} 様\n\nお客様ポータルのパスワード設定リンクを再送します。',
                 portal=True,
@@ -318,18 +335,20 @@ class CustomerInviteView(APIView):
         if User.objects.filter(username=customer.email).exists() or User.objects.filter(email=customer.email).exists():
             return Response({'detail': '同じメールアドレスのユーザーが既に存在します。'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.create(username=customer.email, email=customer.email, is_active=True)
-        user.set_unusable_password()
-        user.save()
+        with transaction.atomic():
+            user = User.objects.create(username=customer.email, email=customer.email, is_active=True)
+            user.set_unusable_password()
+            user.save()
 
-        customer.user = user
-        customer.save(update_fields=['user'])
+            customer.user = user
+            customer.save(update_fields=['user'])
 
-        send_invite_email(
-            user,
-            intro=f'{customer.name} 様\n\nお客様ポータルへのログインアカウントが作成されました。',
-            portal=True,
-        )
+            _send_invite_or_fail(
+                send_invite_email,
+                user,
+                intro=f'{customer.name} 様\n\nお客様ポータルへのログインアカウントが作成されました。',
+                portal=True,
+            )
 
         return Response(CustomerSerializer(customer).data)
 
@@ -555,11 +574,12 @@ class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all().order_by('-date_joined')
 
     def perform_create(self, serializer):
-        user = serializer.save()
-        user.set_unusable_password()
-        user.save()
-        _sync_user_roles(user, self.request.data.get('role_ids'))
-        send_invite_email(user)
+        with transaction.atomic():
+            user = serializer.save()
+            user.set_unusable_password()
+            user.save()
+            _sync_user_roles(user, self.request.data.get('role_ids'))
+            _send_invite_or_fail(send_invite_email, user)
 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -593,7 +613,7 @@ class UserInviteView(APIView):
         if not user.email:
             return Response({'detail': 'メールアドレスが未登録のため招待できません。'}, status=status.HTTP_400_BAD_REQUEST)
 
-        resend_invite_email(user)
+        _send_invite_or_fail(resend_invite_email, user)
         return Response(UserAdminSerializer(user).data)
 
 

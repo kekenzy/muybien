@@ -423,8 +423,8 @@ async function inviteToLab(customer: Customer) {
     if (idx !== -1) customers.value[idx] = updated
     editingCustomer.value = updated
     alert(wasInvited ? '招待メールを再送しました。' : '招待メールを送信しました。')
-  } catch {
-    errorMsg.value = 'ポータルへの招待に失敗しました。'
+  } catch (e: any) {
+    errorMsg.value = e?.response?.data?.detail ?? 'ポータルへの招待に失敗しました。'
   } finally {
     inviting.value = false
   }

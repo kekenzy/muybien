@@ -297,8 +297,8 @@ async function submitForm() {
       users.value.unshift(created)
     }
     closeForm()
-  } catch {
-    errorMsg.value = '保存に失敗しました。'
+  } catch (e: any) {
+    errorMsg.value = e?.response?.data?.detail ?? '保存に失敗しました。'
   } finally {
     saving.value = false
   }
@@ -321,8 +321,8 @@ async function resendInvite(user: LabUser) {
   try {
     await inviteUser(user.id)
     alert('招待メールを再送しました。')
-  } catch {
-    errorMsg.value = '招待メールの再送に失敗しました。'
+  } catch (e: any) {
+    errorMsg.value = e?.response?.data?.detail ?? '招待メールの再送に失敗しました。'
   } finally {
     inviting.value = false
   }
