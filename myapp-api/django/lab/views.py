@@ -540,6 +540,7 @@ class MemoPhotoUploadView(APIView):
         key = f'memo/{memo.pk}/{uuid.uuid4().hex}.jpg'
         save_bytes(key, data, 'image/jpeg')
         photo = MemoPhoto.objects.create(memo=memo, storage_key=key)
+        memo.save(update_fields=['updated_at'])
         return Response(
             MemoPhotoSerializer(photo, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
@@ -553,6 +554,7 @@ class MemoPhotoDetailView(APIView):
     def delete(self, request, pk, photo_id):
         photo = get_object_or_404(MemoPhoto, pk=photo_id, memo_id=pk, memo__owner=request.user)
         photo.delete()
+        photo.memo.save(update_fields=['updated_at'])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

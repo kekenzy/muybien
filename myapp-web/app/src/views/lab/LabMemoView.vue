@@ -31,7 +31,10 @@
         class="flex w-full items-start gap-4 rounded-2xl border border-white/10 p-4 text-left hover:border-white/30"
         @click="startEdit(memo)"
       >
-        <span class="w-16 shrink-0 text-xs font-medium text-indigo-300">{{ memoLabel(memo) }}</span>
+        <span class="w-20 shrink-0">
+          <span class="block text-xs font-medium text-indigo-300">{{ memoLabel(memo) }}</span>
+          <span class="mt-1 block text-[10px] text-white/40">更新 {{ updatedLabel(memo) }}</span>
+        </span>
         <span
           v-if="memo.photos?.length"
           class="relative h-14 w-14 shrink-0 cursor-zoom-in"
@@ -222,6 +225,12 @@ function memoLabel(memo: Memo): string {
   return `${year}/${month}/${day}`
 }
 
+function updatedLabel(memo: Memo): string {
+  const d = new Date(memo.updated_at)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function clearPending() {
   pendingUrls.value.forEach((url) => URL.revokeObjectURL(url))
   pendingFiles.value = []
@@ -302,7 +311,8 @@ async function load() {
   errorMsg.value = ''
   try {
     const data = await fetchMemos()
-    memos.value = [...data].sort((a, b) => memoDay(b).localeCompare(memoDay(a)) || b.id - a.id)
+    // 更新されたメモが最上段に来るよう、更新日時の新しい順に並べる
+    memos.value = [...data].sort((a, b) => b.updated_at.localeCompare(a.updated_at) || b.id - a.id)
   } catch {
     errorMsg.value = 'メモの取得に失敗しました。'
   } finally {

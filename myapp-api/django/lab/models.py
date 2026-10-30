@@ -262,7 +262,7 @@ class Memo(models.Model):
     class Meta:
         verbose_name = 'メモ'
         verbose_name_plural = 'メモ'
-        ordering = ['-date', '-created_at']
+        ordering = ['-updated_at', '-id']
 
     def __str__(self):
         return self.title or f'メモ #{self.pk}'
