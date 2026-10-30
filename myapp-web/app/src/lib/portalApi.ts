@@ -13,6 +13,30 @@ portalApi.interceptors.request.use((config) => {
   return config
 })
 
+let refreshing: Promise<string> | null = null
+
+// refresh はローテーションで使い捨てになるため、同時に401になったリクエストの更新は1回にまとめる
+function refreshAccessToken(): Promise<string> {
+  if (!refreshing) {
+    const refresh = getRefreshToken()
+    refreshing = (async () => {
+      try {
+        const { data } = await axios.post('/v1/api/auth/refresh', { refresh })
+        setTokens(data.access, data.refresh ?? refresh)
+        return data.access as string
+      } catch (e) {
+        // 別タブが先に更新していれば、そのトークンを使う
+        const access = getAccessToken()
+        if (access && getRefreshToken() !== refresh) return access
+        throw e
+      }
+    })().finally(() => {
+      refreshing = null
+    })
+  }
+  return refreshing
+}
+
 portalApi.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -30,9 +54,8 @@ portalApi.interceptors.response.use(
 
     original._retry = true
     try {
-      const { data } = await axios.post('/v1/api/auth/refresh', { refresh })
-      setTokens(data.access, refresh)
-      original.headers.Authorization = `Bearer ${data.access}`
+      const access = await refreshAccessToken()
+      original.headers.Authorization = `Bearer ${access}`
       return portalApi(original)
     } catch {
       clearTokens()
@@ -70,6 +93,9 @@ export async function fetchPortalMe(): Promise<PortalMeResponse> {
 }
 
 export function portalLogout(): void {
+  // サーバー側でも refresh を失効させる（失敗してもローカルのログアウトは進める）
+  const refresh = getRefreshToken()
+  if (refresh) axios.post('/v1/api/auth/logout', { refresh }).catch(() => {})
   clearTokens()
 }
 

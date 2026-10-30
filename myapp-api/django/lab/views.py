@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.db import transaction
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from PIL import Image, ImageOps
@@ -25,6 +26,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .invitations import (
@@ -54,7 +57,7 @@ from .serializers import (
     TaskPhotoSerializer,
     UserAdminSerializer,
 )
-from .storage import save_bytes
+from .storage import photo_path_from_token, save_bytes
 
 try:
     from pillow_heif import register_heif_opener
@@ -83,6 +86,9 @@ def _send_invite_or_fail(send, user, **kwargs):
         logger.exception('招待メールの送信に失敗しました (user_id=%s)', user.pk)
         raise InviteEmailFailed()
 PASSWORD_RESET_EMAIL_COOLDOWN_SECONDS = 5 * 60
+# IP を変えながらの総当たりに備え、ユーザー名単位でもログイン失敗回数を数えて一時ロックする
+LOGIN_FAILURE_LIMIT = 10
+LOGIN_LOCK_SECONDS = 15 * 60
 
 
 def _sync_user_roles(user, role_ids):
@@ -113,20 +119,33 @@ def _sync_role_extras(role, data):
 class LabTokenObtainPairView(TokenObtainPairView):
     """Labログイン。閲覧・操作できるメニューは権限管理の設定に依存する。"""
 
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
+
     def post(self, request, *args, **kwargs):
-        username = request.data.get('username', '')
+        username = str(request.data.get('username', ''))
         password = request.data.get('password', '')
+
+        failure_key = f'lab:login-failures:{username.lower()}'
+        if cache.get(failure_key, 0) >= LOGIN_FAILURE_LIMIT:
+            return Response(
+                {'detail': 'ログインの失敗が続いたため、一時的にロックしています。15分ほどしてからお試しください。'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        invalid = Response({'detail': 'ユーザー名またはパスワードが正しくありません。'}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            return Response({'detail': 'ユーザー名またはパスワードが正しくありません。'}, status=status.HTTP_401_UNAUTHORIZED)
+            _record_login_failure(failure_key)
+            return invalid
+
+        if not user.check_password(password):
+            _record_login_failure(failure_key)
+            return invalid
 
         if not user.is_active:
             return Response({'detail': 'このアカウントは無効化されています。'}, status=status.HTTP_403_FORBIDDEN)
-
-        if not user.check_password(password):
-            return Response({'detail': 'ユーザー名またはパスワードが正しくありません。'}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 顧客専用アカウントは Lab ではなくポータルへ
         if hasattr(user, 'customer_profile') and not user.is_staff and not user.is_superuser:
@@ -135,7 +154,37 @@ class LabTokenObtainPairView(TokenObtainPairView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        cache.delete(failure_key)
         return super().post(request, *args, **kwargs)
+
+
+def _record_login_failure(failure_key):
+    # 最後の失敗から LOGIN_LOCK_SECONDS 経てばリセットされる
+    cache.set(failure_key, cache.get(failure_key, 0) + 1, LOGIN_LOCK_SECONDS)
+
+
+def _revoke_refresh_tokens(user):
+    """ユーザーの発行済み refresh トークンをすべて失効させる（他の端末のログインも切れる）。"""
+    for token in OutstandingToken.objects.filter(user=user):
+        BlacklistedToken.objects.get_or_create(token=token)
+
+
+class LabPhotoView(APIView):
+    """日記・メモ・タスクの写真を、署名付きURLのトークンを検証したうえで返す。
+
+    <img> からはAuthorizationヘッダーを送れないため、JWTの代わりに短時間有効な署名で本人確認する。
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        path = photo_path_from_token(request.query_params.get('t', ''))
+        if path is None:
+            raise Http404
+        response = FileResponse(open(path, 'rb'), content_type='image/jpeg')
+        response['Cache-Control'] = 'private, max-age=3600'
+        return response
 
 
 class MeView(APIView):
@@ -209,7 +258,14 @@ class ChangePasswordView(APIView):
 
         user.set_password(new_password)
         user.save(update_fields=['password'])
-        return Response({'detail': 'パスワードを変更しました。'})
+        # 乗っ取られていた場合に備えて他の端末のログインを切り、この端末には新しいトークンを渡す
+        _revoke_refresh_tokens(user)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'detail': 'パスワードを変更しました。',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        })
 
 
 class PasswordResetRequestView(APIView):
@@ -279,6 +335,7 @@ class PasswordResetConfirmView(APIView):
 
         user.set_password(password)
         user.save(update_fields=['password'])
+        _revoke_refresh_tokens(user)
         return Response({'detail': 'パスワードを再設定しました。'})
 
 

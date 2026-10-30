@@ -14,6 +14,30 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+let refreshing: Promise<string> | null = null
+
+// refresh はローテーションで使い捨てになるため、同時に401になったリクエストの更新は1回にまとめる
+function refreshAccessToken(): Promise<string> {
+  if (!refreshing) {
+    const refresh = getRefreshToken()
+    refreshing = (async () => {
+      try {
+        const { data } = await axios.post('/v1/api/auth/refresh', { refresh })
+        setTokens(data.access, data.refresh ?? refresh)
+        return data.access as string
+      } catch (e) {
+        // 別タブが先に更新していれば、そのトークンを使う
+        const access = getAccessToken()
+        if (access && getRefreshToken() !== refresh) return access
+        throw e
+      }
+    })().finally(() => {
+      refreshing = null
+    })
+  }
+  return refreshing
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -31,9 +55,8 @@ api.interceptors.response.use(
 
     original._retry = true
     try {
-      const { data } = await axios.post('/v1/api/auth/refresh', { refresh })
-      setTokens(data.access, refresh)
-      original.headers.Authorization = `Bearer ${data.access}`
+      const access = await refreshAccessToken()
+      original.headers.Authorization = `Bearer ${access}`
       return api(original)
     } catch {
       clearTokens()
@@ -92,6 +115,9 @@ export async function updateContact(id: number, is_replied: boolean): Promise<Co
 }
 
 export function logout(): void {
+  // サーバー側でも refresh を失効させる（失敗してもローカルのログアウトは進める）
+  const refresh = getRefreshToken()
+  if (refresh) axios.post('/v1/api/auth/logout', { refresh }).catch(() => {})
   clearTokens()
   clearPermissions()
 }
@@ -110,10 +136,12 @@ export async function setPassword(
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  await api.post('/auth/change-password', {
+  // 変更すると他の端末のログインは切れ、この端末には新しいトークンが返る
+  const { data } = await api.post<LoginResponse>('/auth/change-password', {
     current_password: currentPassword,
     new_password: newPassword,
   })
+  setTokens(data.access, data.refresh)
 }
 
 export async function requestPasswordReset(email: string): Promise<{ detail: string }> {

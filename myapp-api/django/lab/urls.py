@@ -1,5 +1,5 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.views import TokenBlacklistView, TokenRefreshView
 
 from .views import (
     ContactDetailView,
@@ -19,6 +19,7 @@ from .views import (
     LabReservationDetailView,
     LabReservationListView,
     LabReservationSettingsView,
+    LabPhotoView,
     LabTokenObtainPairView,
     MeView,
     MemoDetailView,
@@ -42,6 +43,7 @@ from .views import (
 urlpatterns = [
     path('auth/login', LabTokenObtainPairView.as_view()),
     path('auth/refresh', TokenRefreshView.as_view()),
+    path('auth/logout', TokenBlacklistView.as_view()),
     path('auth/me', MeView.as_view()),
     path('auth/change-password', ChangePasswordView.as_view()),
     path('auth/password-reset', PasswordResetRequestView.as_view()),
@@ -54,6 +56,7 @@ urlpatterns = [
     path('lab/customers/<int:pk>/invite', CustomerInviteView.as_view()),
     path('lab/tasks', TaskListCreateView.as_view()),
     path('lab/tasks/<int:pk>', TaskDetailView.as_view()),
+    path('lab/photos', LabPhotoView.as_view()),
     path('lab/tasks/<int:pk>/photos', TaskPhotoUploadView.as_view()),
     path('lab/tasks/<int:pk>/photos/<int:photo_id>', TaskPhotoDetailView.as_view()),
     path('lab/diaries', DiaryListCreateView.as_view()),

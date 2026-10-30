@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'contact',
     'lab',
     'portal',
@@ -78,15 +79,27 @@ REST_FRAMEWORK = {
     # クライアントIPとして扱う（先頭はクライアントが偽装できるため）
     'NUM_PROXIES': 1,
     'DEFAULT_THROTTLE_RATES': {
+        'login': '10/minute',
         'password_reset': '5/hour',
         'password_change': '10/hour',
     },
 }
 
+# アクセストークンは短命にし、refresh はローテーションのたびに古いものを失効させる
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+# レート制限・ログイン失敗回数を gunicorn の全ワーカーで共有するため DB キャッシュにする
+# （テーブルは manage.py createcachetable で作成）
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache',
+    },
 }
 
 # Email（環境変数で上書き）
