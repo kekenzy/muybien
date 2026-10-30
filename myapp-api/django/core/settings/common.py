@@ -4,6 +4,8 @@ from datetime import timedelta, timezone
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 DEBUG = False
+# Django Admin は本番では既定で無効。必要なときだけ環境変数 ADMIN_ENABLED=true で一時的に有効にする
+ADMIN_ENABLED = os.environ.get('ADMIN_ENABLED', '').strip().lower() in ('1', 'true', 'yes')
 ALLOWED_HOSTS = ['*']
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

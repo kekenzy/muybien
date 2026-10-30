@@ -2,6 +2,7 @@ from core.settings.common import *  # noqa
 import os
 
 DEBUG = True
+ADMIN_ENABLED = True
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-insecure-secret-key-for-local-only')
 
 DATABASES = {

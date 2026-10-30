@@ -4,12 +4,14 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('v1/api/', include('contact.urls')),
     path('v1/api/', include('lab.urls')),
     path('v1/api/', include('portal.urls')),
     path('v1/api/', include('content.urls')),
 ]
+
+if settings.ADMIN_ENABLED:
+    urlpatterns.append(path('admin/', admin.site.urls))
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

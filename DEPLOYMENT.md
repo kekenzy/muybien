@@ -236,7 +236,8 @@ sudo docker compose -f docker-compose.prod.yml restart myapp-api
 sudo docker exec -it muybien-api python manage.py createsuperuser
 ```
 
-スーパーユーザーは Django Admin（`/admin/`）および **永井のLab**（`/lab/login`）で使用します。詳細は [README.md](README.md) / [PRODUCTION.md](PRODUCTION.md)。
+スーパーユーザーは Django Admin（`/admin/`）および **永井のLab**（`/lab/login`）で使用します。
+本番の Django Admin は既定で無効です。使うときだけ `.env.prod` に `ADMIN_ENABLED=true` を設定して API コンテナを再起動し、作業後は外してください。詳細は [README.md](README.md) / [PRODUCTION.md](PRODUCTION.md)。
 ---
 
 ## 🔍 7. トラブルシューティング

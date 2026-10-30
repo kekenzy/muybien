@@ -133,6 +133,14 @@ Django は SMTP クライアントとして SES に接続し、お問い合わ�
 > **重要**: `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` は **IAM の通常アクセスキー（コンソールログイン用）とは別物** です。  
 > AWS SES コンソールの「SMTP 認証情報を作成」から発行する **SES 専用の SMTP 資格情報** を `.env.prod` に設定します。
 
+### Django Admin
+
+本番の `/admin/` は既定で閉じます。使うときだけ `.env.prod` に `ADMIN_ENABLED=true` を入れて API コンテナを再作成し、作業後は外してください。ローカル開発では常に開いています。
+
+| 変数名 | 説明 | 設定例 |
+|--------|------|--------|
+| `ADMIN_ENABLED` | `true` / `1` / `yes` のときだけ本番の Django Admin を開く | 普段は未設定。作業時だけ `true` |
+
 ### 日記の写真（S3）
 
 未設定のあいだはサーバー内の `/media/` に保存します。設定後の新規写真は非公開 S3 に入り、7 日間の署名付き URL で表示します。手順は [DIARY_PHOTOS.md](DIARY_PHOTOS.md)。
@@ -371,7 +379,7 @@ ssh muy 'sudo docker exec muybien-api python manage.py migrate --noinput'
 |------|-----|
 | Lab ログイン | `https://muybien.jp/lab/login` |
 | Lab ダッシュボード | `https://muybien.jp/lab`（お問い合わせ一覧） |
-| Django Admin | `https://muybien.jp/admin/` |
+| Django Admin | `https://muybien.jp/admin/`（既定では無効。使うときだけ `.env.prod` に `ADMIN_ENABLED=true` を入れて API コンテナを再作成し、作業後は外す） |
 
 **初回デプロイ後、スーパーユーザー未作成だと Lab にログインできません。** 必ず一度作成してください。
 
@@ -447,6 +455,9 @@ EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=noreply@muybien.jp
 CONTACT_NOTIFY_EMAIL=kenji.nagai@globalway.co.jp
+
+# Django Admin は未設定だと無効。使うときだけ true
+# ADMIN_ENABLED=true
 
 AWS_S3_DIARY_BUCKET=（日記写真用バケット。空ならサーバー内 media）
 AWS_S3_REGION=ap-northeast-1

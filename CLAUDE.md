@@ -145,5 +145,6 @@ make prod-down              # 本番停止
 | `SECRET_KEY` | Django シークレットキー（本番必須） |
 | `RDS_*` | PostgreSQL 接続情報 |
 | `CONTACT_NOTIFY_EMAIL` | コンタクト通知先メール |
+| `ADMIN_ENABLED` | `true` で本番でも Django Admin（`/admin/`）を有効化（既定は無効。ローカルは常に有効） |
 | `FRONTEND_BASE_URL` | 招待メールのリンク先（本番は公開 URL。未設定だと localhost） |
 | `AWS_SES_*` | 本番メール送信用 AWS SES 設定 |
