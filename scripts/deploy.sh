@@ -211,7 +211,8 @@ ssh "${SSH_HOST}" "chmod -R a+rX ${PROD_DIR}/myapp-web/app/dist"
 
 # リモートでデプロイスクリプト実行
 echo "🔄 本番コンテナを起動中..."
-ssh "${SSH_HOST}" "PROD_DIR=${PROD_DIR} PROD_DOMAIN=${PROD_DOMAIN} COMPOSE_FILE=${COMPOSE_FILE} bash ${PROD_DIR}/scripts/deploy_lightsail.sh"
+# BUILD=1 make deploy のときにリモートでもイメージを作り直す（渡さないと requirements の変更が反映されない）
+ssh "${SSH_HOST}" "BUILD=${BUILD:-} PROD_DIR=${PROD_DIR} PROD_DOMAIN=${PROD_DOMAIN} COMPOSE_FILE=${COMPOSE_FILE} bash ${PROD_DIR}/scripts/deploy_lightsail.sh"
 
 echo ""
 echo "✅ デプロイが正常に完了しました！"

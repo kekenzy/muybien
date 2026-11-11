@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-11-11 — API を Django 5.2 LTS へ移行
+
+- Django 4.2.13 → 5.2.19（4.2 は 2026年4月でサポート終了）。あわせて DRF 3.18.3・simplejwt 5.5.1・django-cors-headers 4.9.0・gunicorn 27.0.0・Pillow 13.0.0・pillow-heif 1.8.1・psycopg2-binary 2.9.13・stripe 15.6.2・boto3 1.44.0 に更新（`pip-audit` で既知の脆弱性なし）
+- コードの書き換えは不要だった（5.0〜5.2 で消えた機能は未使用、マイグレーションの追加なし）。API の応答は変わらない
+- `lab/tests.py` に JWT（ログイン・ローテーション・失効）とコンタクトフォームのテストを追加
+- `scripts/deploy.sh`: `BUILD=1 make deploy` の `BUILD` がサーバー側に渡らず、イメージが作り直されなかったのを修正
+- 詳細・確認内容・戻し方: [DJANGO_5_2_MIGRATION.md](DJANGO_5_2_MIGRATION.md)
+
 ## 2026-07-14/15 — 永井のLab: RBAC・顧客管理・タスク・日記機能の追加
 
 ### 概要

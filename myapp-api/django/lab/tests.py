@@ -250,3 +250,71 @@ class OwnershipScopeTests(TestCase):
         self.client.force_authenticate(user=self.bob)
         response = self.client.patch(f'/v1/api/lab/tasks/{task.id}', {'title': 'hacked'}, format='json')
         self.assertEqual(response.status_code, 403)
+
+
+class JwtFlowTests(TestCase):
+    """Django 5.2 / DRF / simplejwt を上げても、ログイン〜更新〜失効の振る舞いが変わらないことを確かめる。"""
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        User.objects.create_user(username='jwt@example.com', password='password123', is_staff=True)
+
+    def _login(self):
+        response = self.client.post(
+            '/v1/api/auth/login', {'username': 'jwt@example.com', 'password': 'password123'}, format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        return response.json()
+
+    def test_login_returns_tokens_and_access_works(self):
+        tokens = self._login()
+        self.assertIn('access', tokens)
+        self.assertIn('refresh', tokens)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+        self.assertEqual(self.client.get('/v1/api/auth/me').status_code, 200)
+
+    def test_wrong_password_is_401(self):
+        response = self.client.post(
+            '/v1/api/auth/login', {'username': 'jwt@example.com', 'password': 'wrong'}, format='json',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_refresh_rotates_and_blacklists_old_token(self):
+        tokens = self._login()
+        response = self.client.post('/v1/api/auth/refresh', {'refresh': tokens['refresh']}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('access', response.json())
+        self.assertNotEqual(response.json()['refresh'], tokens['refresh'])
+        again = self.client.post('/v1/api/auth/refresh', {'refresh': tokens['refresh']}, format='json')
+        self.assertEqual(again.status_code, 401)
+
+    def test_logout_blacklists_refresh_token(self):
+        tokens = self._login()
+        response = self.client.post('/v1/api/auth/logout', {'refresh': tokens['refresh']}, format='json')
+        self.assertEqual(response.status_code, 200)
+        again = self.client.post('/v1/api/auth/refresh', {'refresh': tokens['refresh']}, format='json')
+        self.assertEqual(again.status_code, 401)
+
+    def test_invalid_access_token_is_401(self):
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer invalid')
+        self.assertEqual(self.client.get('/v1/api/auth/me').status_code, 401)
+
+
+class ContactFormTests(TestCase):
+    def test_contact_saves_and_sends_mail(self):
+        from contact.models import ContactMessage
+
+        response = APIClient().post('/v1/api/contact', {
+            'name': '問合 太郎', 'email': 'guest@example.com', 'subject': '件名', 'message': '本文',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(ContactMessage.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_contact_rejects_invalid_email(self):
+        response = APIClient().post('/v1/api/contact', {
+            'name': 'x', 'email': 'not-an-email', 'subject': 's', 'message': 'm',
+        }, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('email', response.json())
