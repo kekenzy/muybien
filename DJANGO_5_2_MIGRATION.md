@@ -30,7 +30,7 @@
 ## コードの変更
 
 - 4.2 → 5.2 で消えた・非推奨になったもの（`STATICFILES_STORAGE`・`DEFAULT_FILE_STORAGE`・`USE_L10N`・`pytz`・`index_together`・`LogoutView`・`format_html` の引数なし・`URLField` など）は使っていなかった。API だけでテンプレートのログアウトも無い（Lab のログアウトは JWT の `auth/logout`＝`TokenBlacklistView`）
-- `makemigrations --check` は「No changes detected」。マイグレーションの追加は無い
+- `makemigrations --check` は「No changes detected」。アプリのマイグレーションの追加は無い。ライブラリ側では simplejwt 5.5 の `token_blacklist.0013`（`verbose_name` と `ordering` を変えるだけで、テーブルは変わらない）が本番で1件適用された
 - `lab/tests.py` に、移行で振る舞いが変わっていないことを見るテストを足した
   - JWT: ログイン → `auth/me`、パスワード違いは 401、refresh のローテーションで古い refresh は 401、`auth/logout` 後の refresh は 401、不正なアクセストークンは 401
   - コンタクトフォーム: 201 で保存・メール2通、メールアドレスが不正なら 400
@@ -60,4 +60,24 @@ git revert <この移行のコミット>   # requirements.txt などが 4.2 の�
 BUILD=1 make deploy               # 本番のイメージを 4.2 の版で作り直す
 ```
 
-マイグレーションの追加が無いので、DB を戻す作業は要らない。
+DB を戻す作業は要らない（`token_blacklist.0013` は適用済みのまま残るが、テーブルを変えないので 4.2 の版でも動く）。
+
+急ぎで戻すときは、デプロイ前のイメージに `muybien-myapp-api:django42` のタグを付けてある。サーバーで次のようにする。
+
+```bash
+ssh muy
+cd /home/ec2-user/muybien
+docker tag muybien-myapp-api:django42 muybien-myapp-api:latest
+docker compose -f docker-compose.prod.yml up -d --no-build myapp-api
+```
+
+ソースはボリュームでマウントしているので、この方法でも先に `git revert` の内容を rsync で送っておくこと（`make deploy`）。
+デプロイ直前の DB のバックアップ: サーバーの `~/backups/muybien_before_django52_202611110619.sql.gz`
+
+## 本番デプロイ（2026-11-11）
+
+`BUILD=1 make deploy` で本番に出した。Django 5.2.19・DRF 3.18.3・Pillow 13.0.0・gunicorn 27.0.0 で起動し、`migrate` は `token_blacklist.0013` だけ適用された。
+外から見て、公開ページ（トップ・サービス・実績・プロフィール・コンタクト・Lab ログイン）が 200、`site-content`・`announcements` が 200、トークンなしの `auth/me` とパスワード違いのログインが 401、`/admin/` が 404（既定どおり無効）。
+本番の Lab にユーザーがログインして（06:47、200）、お問い合わせ・タスク・日記の API が 200。デプロイ後の API の 5xx は 0 件、API のログにエラーなし。
+写真は S3 で、新しい boto3 で出した署名付き URL から既存の日記の写真が 200 で取れた。
+ログイン前に古い refresh トークンが 401 になる流れは、デプロイ前（11/5・11/9）にも同じように起きていて、移行による変化ではない。
