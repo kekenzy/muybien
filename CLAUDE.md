@@ -1,3 +1,5 @@
+@/Volumes/DevDisk/01_dev/_hub/common/RULES.md
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with this repository.
