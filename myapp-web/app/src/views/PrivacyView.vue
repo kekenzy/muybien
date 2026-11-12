@@ -136,7 +136,7 @@
             <li><span class="font-medium text-gray-900">基本方針・規律</span>：本ポリシーを定め、取得・利用・保存・削除の各段階での取り扱い方法を決めています。</li>
             <li><span class="font-medium text-gray-900">組織的な措置</span>：個人情報を取り扱うのは運営者本人に限っています。漏えいなどが起きた場合は、法令に従い個人情報保護委員会への報告とご本人への通知を行います。</li>
             <li><span class="font-medium text-gray-900">人的な措置</span>：運営者は、個人情報の取り扱いについて継続して確認・学習しています。</li>
-            <li><span class="font-medium text-gray-900">物理的な措置</span>：データは物理的な安全対策がとられたクラウド事業者のデータセンターに保管し、個人情報を扱う端末には画面ロックとディスクの暗号化を設定しています。<mark class="bg-red-100 text-red-700 font-bold px-1 rounded">【公開前に要実施：ディスク暗号化（FileVault）】</mark></li>
+            <li><span class="font-medium text-gray-900">物理的な措置</span>：データは物理的な安全対策がとられたクラウド事業者のデータセンターに保管し、業務で使う端末には画面ロックを設定し、端末と記録媒体のディスクを暗号化しています。</li>
             <li><span class="font-medium text-gray-900">技術的な措置</span>：通信を暗号化（HTTPS）し、管理画面はログインした権限のある者だけが使えるようにしています。サーバーや外部サービスの管理アカウントには2段階認証を設定しています。<mark class="bg-red-100 text-red-700 font-bold px-1 rounded">【公開前に要実施：2段階認証】</mark>パスワードは暗号学的に変換して保存し、ログインの試行回数を制限しています。</li>
             <li><span class="font-medium text-gray-900">外的環境の把握</span>：データは原則として日本国内（AWS 東京リージョン）に保管しています。アメリカ合衆国の Stripe, Inc. に預ける情報については、同国の個人情報保護制度を把握したうえで安全管理措置を講じています。</li>
           </ul>
