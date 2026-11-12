@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2026-11-12〜13 — プライバシーポリシーの追加
+
+- `/privacy` を追加（`PrivacyView.vue`。全10項：事業者・取得する情報・利用目的・第三者提供・委託先と所在国（AWS 東京リージョン／Stripe 米国）・外部送信（Google Fonts）・安全管理措置（個人情報保護法32条）・開示などの請求・窓口・改定）
+- お問い合わせフォームにプライバシーポリシーへの同意チェックを追加。API（`/v1/api/contact`）でも `agree_privacy: true` がなければ 400 を返す。`contact/tests.py` にテストを追加
+- フッターにお問い合わせ・プライバシーポリシーへのリンクを追加
+- 運営者は Stella Studio（代表 永井 謙史）。個人情報の窓口はお問い合わせフォームと stellastudio4xx＠gmail.com（ページ上は全角の＠で表示）
+- 本番の `CONTACT_NOTIFY_EMAIL` を勤務先のメールから個人のメール（stellastudio4xx@gmail.com）に変更。変更前の設定はサーバーの `.env.prod.bak-20261113` に保存。`env.prod.example`・PRODUCTION.md・DEPLOYMENT.md の例も更新
+- 制定日は 2026-11-13。同日に本番へデプロイ
+- 残り：本番からお問い合わせをテスト送信し、通知メールが個人のメールに届くか確認する（SES がサンドボックスなら送信先アドレスの検証が必要）
+
 ## 2026-11-11 — API を Django 5.2 LTS へ移行
 
 - Django 4.2.13 → 5.2.19（4.2 は 2026年4月でサポート終了）。あわせて DRF 3.18.3・simplejwt 5.5.1・django-cors-headers 4.9.0・gunicorn 27.0.0・Pillow 13.0.0・pillow-heif 1.8.1・psycopg2-binary 2.9.13・stripe 15.6.2・boto3 1.44.0 に更新（`pip-audit` で既知の脆弱性なし）
