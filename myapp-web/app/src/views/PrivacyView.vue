@@ -95,7 +95,7 @@
           <p class="mt-4">
             Stripe, Inc. はアメリカ合衆国の事業者です。同国の個人情報保護制度については、個人情報保護委員会が公表している
             <a
-              href="https://www.ppc.go.jp/personalinfo/legal/kaiseihogohou/"
+              href="https://www.ppc.go.jp/enforcement/infoprovision/laws/"
               target="_blank"
               rel="noopener noreferrer"
               class="text-primary underline underline-offset-2 hover:opacity-80"
@@ -189,5 +189,5 @@ const REPRESENTATIVE = '永井 謙史'
 // 個人情報の窓口（Stella Studio 共通）
 const CONTACT_EMAIL = 'stellastudio4xx＠gmail.com'
 // 公開日に合わせて更新する。改定したら「最終改定日」を別に足す
-const ESTABLISHED_ON = '2026年11月12日'
+const ESTABLISHED_ON = '2026年11月13日'
 </script>

@@ -128,7 +128,7 @@ Django は SMTP クライアントとして SES に接続し、お問い合わ�
 | `EMAIL_HOST_USER` | **SES で作成した SMTP ユーザー名** | `AKIAxxxxxxxxxxxx` 形式 |
 | `EMAIL_HOST_PASSWORD` | **SES で作成した SMTP パスワード** | 作成時に一度だけ表示される文字列 |
 | `DEFAULT_FROM_EMAIL` | 送信元（**SES で検証済み**のアドレス） | `noreply@muybien.jp` |
-| `CONTACT_NOTIFY_EMAIL` | お問い合わせ通知先 | `kenji.nagai@globalway.co.jp` |
+| `CONTACT_NOTIFY_EMAIL` | お問い合わせ通知先 | `stellastudio4xx@gmail.com` |
 
 > **重要**: `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` は **IAM の通常アクセスキー（コンソールログイン用）とは別物** です。  
 > AWS SES コンソールの「SMTP 認証情報を作成」から発行する **SES 専用の SMTP 資格情報** を `.env.prod` に設定します。
@@ -279,7 +279,7 @@ EMAIL_HOST_PASSWORD=（SES で表示された SMTP パスワード）
 EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=noreply@muybien.jp
-CONTACT_NOTIFY_EMAIL=kenji.nagai@globalway.co.jp
+CONTACT_NOTIFY_EMAIL=stellastudio4xx@gmail.com
 ```
 
 反映（**`restart` だけでは `.env.prod` は再読み込みされません**。コンテナを再作成してください）：
@@ -454,7 +454,7 @@ EMAIL_HOST_PASSWORD=（SES コンソール「SMTP 認証情報を作成」で表
 EMAIL_USE_TLS=True
 EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=noreply@muybien.jp
-CONTACT_NOTIFY_EMAIL=kenji.nagai@globalway.co.jp
+CONTACT_NOTIFY_EMAIL=stellastudio4xx@gmail.com
 
 # Django Admin は未設定だと無効。使うときだけ true
 # ADMIN_ENABLED=true

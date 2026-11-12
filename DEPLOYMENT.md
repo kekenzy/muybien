@@ -136,7 +136,7 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 DEFAULT_FROM_EMAIL=noreply@yourdomain.com
 EMAIL_HOST_USER=（SES SMTP ユーザー名）
 EMAIL_HOST_PASSWORD=（SES SMTP パスワード）
-CONTACT_NOTIFY_EMAIL=kenji.nagai@globalway.co.jp
+CONTACT_NOTIFY_EMAIL=stellastudio4xx@gmail.com
 ```
 
 詳細は [PRODUCTION.md](PRODUCTION.md) を参照。
