@@ -136,8 +136,8 @@
             <li><span class="font-medium text-gray-900">基本方針・規律</span>：本ポリシーを定め、取得・利用・保存・削除の各段階での取り扱い方法を決めています。</li>
             <li><span class="font-medium text-gray-900">組織的な措置</span>：個人情報を取り扱うのは運営者本人に限っています。漏えいなどが起きた場合は、法令に従い個人情報保護委員会への報告とご本人への通知を行います。</li>
             <li><span class="font-medium text-gray-900">人的な措置</span>：運営者は、個人情報の取り扱いについて継続して確認・学習しています。</li>
-            <li><span class="font-medium text-gray-900">物理的な措置</span>：データは物理的な安全対策がとられたクラウド事業者のデータセンターに保管し、個人情報を扱う端末には画面ロック・ディスクの暗号化を設定しています。</li>
-            <li><span class="font-medium text-gray-900">技術的な措置</span>：通信を暗号化（HTTPS）し、管理画面はログインした権限のある者だけが使えるようにしています。パスワードは暗号学的に変換して保存し、ログインの試行回数を制限しています。</li>
+            <li><span class="font-medium text-gray-900">物理的な措置</span>：データは物理的な安全対策がとられたクラウド事業者のデータセンターに保管し、個人情報を扱う端末には画面ロックとディスクの暗号化を設定しています。<mark class="bg-red-100 text-red-700 font-bold px-1 rounded">【公開前に要実施：ディスク暗号化（FileVault）】</mark></li>
+            <li><span class="font-medium text-gray-900">技術的な措置</span>：通信を暗号化（HTTPS）し、管理画面はログインした権限のある者だけが使えるようにしています。サーバーや外部サービスの管理アカウントには2段階認証を設定しています。<mark class="bg-red-100 text-red-700 font-bold px-1 rounded">【公開前に要実施：2段階認証】</mark>パスワードは暗号学的に変換して保存し、ログインの試行回数を制限しています。</li>
             <li><span class="font-medium text-gray-900">外的環境の把握</span>：データは原則として日本国内（AWS 東京リージョン）に保管しています。アメリカ合衆国の Stripe, Inc. に預ける情報については、同国の個人情報保護制度を把握したうえで安全管理措置を講じています。</li>
           </ul>
         </section>
@@ -155,10 +155,16 @@
         <section>
           <h2 class="text-lg font-bold text-gray-900 mb-3">9. お問い合わせ窓口</h2>
           <p>
-            個人情報の取り扱いに関するご質問・苦情・開示などの請求は、
+            個人情報の取り扱いに関するご質問・苦情・開示などの請求は、下記のメールアドレス、または
             <router-link to="/contact" class="text-primary underline underline-offset-2 hover:opacity-80">お問い合わせフォーム</router-link>
             から、件名に「個人情報について」とご記入のうえご連絡ください。
           </p>
+          <dl class="grid grid-cols-[6.5rem_1fr] gap-x-4 gap-y-2 mt-3">
+            <dt class="text-gray-500">窓口</dt>
+            <dd>{{ OPERATOR_NAME }}　個人情報お問い合わせ窓口</dd>
+            <dt class="text-gray-500">メール</dt>
+            <dd class="break-all">{{ CONTACT_EMAIL }}</dd>
+          </dl>
         </section>
 
         <section>
@@ -177,9 +183,11 @@
 </template>
 
 <script setup lang="ts">
-// 運営者名・代表者は表記が決まったら差し替える
-const OPERATOR_NAME = '【要確認：運営者名】'
-const REPRESENTATIVE = '【要確認：代表者名】'
+// 運営者は屋号 Stella Studio・代表者 永井 謙史（全プロジェクト共通）
+const OPERATOR_NAME = 'Stella Studio'
+const REPRESENTATIVE = '永井 謙史'
+// 個人情報の窓口（Stella Studio 共通）
+const CONTACT_EMAIL = 'stellastudio4xx＠gmail.com'
 // 公開日に合わせて更新する。改定したら「最終改定日」を別に足す
 const ESTABLISHED_ON = '2026年11月12日'
 </script>
