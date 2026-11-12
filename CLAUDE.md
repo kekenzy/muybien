@@ -29,7 +29,7 @@ Django REST API + Vue 3 SPA 構成。**CSS は Tailwind CSS 4**（scoped CSS / S
 - テーマカラー等は `main.css` の `@theme { }` で定義（`--color-primary` 等）
 - 条件付きクラス結合は `src/lib/utils.ts` の `cn()` を使う
 - UI: `radix-vue` + `lucide-vue-next`（Tailwind で見た目を当てる）
-- ルーター: `/`, `/services`, `/portfolio`, `/profile`, `/contact`, `/lab`, `/lab/login`
+- ルーター: `/`, `/services`, `/portfolio`, `/profile`, `/contact`, `/privacy`, `/lab`, `/lab/login`
 - axios で `/v1/api/` へリクエスト（Vite proxy 経由）
 
 **フロントのスタイル方針**
@@ -45,7 +45,7 @@ Django REST API + Vue 3 SPA 構成。**CSS は Tailwind CSS 4**（scoped CSS / S
 
 | Method | Path | 説明 |
 |--------|------|------|
-| POST | `/v1/api/contact` | コンタクトフォーム送信（メール通知・DB保存） |
+| POST | `/v1/api/contact` | コンタクトフォーム送信（メール通知・DB保存。`agree_privacy: true` 必須） |
 | POST | `/v1/api/auth/login` | Lab ログイン（JWT） |
 | POST | `/v1/api/auth/refresh` | JWT リフレッシュ |
 | GET | `/v1/api/auth/me` | ログイン中ユーザー（権限情報を含む） |

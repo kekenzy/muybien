@@ -97,8 +97,12 @@
       <router-view />
     </main>
 
-    <footer class="border-t border-white/10 bg-[#080c14] py-8 text-center text-sm text-white/30">
-      © 2024 永井謙史 All rights reserved.
+    <footer class="border-t border-white/10 bg-[#080c14] py-8 px-4 text-center text-sm text-white/30">
+      <nav class="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4" aria-label="フッター">
+        <router-link to="/contact" class="text-white/50 hover:text-white transition-colors">お問い合わせ</router-link>
+        <router-link to="/privacy" class="text-white/50 hover:text-white transition-colors">プライバシーポリシー</router-link>
+      </nav>
+      <p>© 2024 永井謙史 All rights reserved.</p>
     </footer>
   </div>
 </template>

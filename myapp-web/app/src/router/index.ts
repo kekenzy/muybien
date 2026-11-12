@@ -26,6 +26,7 @@ const router = createRouter({
     { path: '/portfolio', component: () => import('../views/PortfolioView.vue') },
     { path: '/profile', component: () => import('../views/ProfileView.vue') },
     { path: '/contact', component: () => import('../views/ContactView.vue') },
+    { path: '/privacy', component: () => import('../views/PrivacyView.vue') },
     { path: '/news/:id', component: () => import('../views/AnnouncementDetailView.vue') },
     // 静的LP（public/picsco）。Viteは /picsco/ をSPAに落とすため index.html へハード遷移する
     {

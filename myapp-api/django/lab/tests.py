@@ -307,6 +307,7 @@ class ContactFormTests(TestCase):
 
         response = APIClient().post('/v1/api/contact', {
             'name': '問合 太郎', 'email': 'guest@example.com', 'subject': '件名', 'message': '本文',
+            'agree_privacy': True,
         }, format='json')
         self.assertEqual(response.status_code, 201)
         self.assertEqual(ContactMessage.objects.count(), 1)

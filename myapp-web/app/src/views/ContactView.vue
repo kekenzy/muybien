@@ -59,6 +59,24 @@
             class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition resize-none"
           />
         </div>
+        <label class="flex items-start gap-3 pt-2 text-sm text-gray-700 cursor-pointer">
+          <input
+            v-model="form.agree_privacy"
+            type="checkbox"
+            required
+            class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-primary"
+          />
+          <span>
+            <router-link
+              to="/privacy"
+              target="_blank"
+              class="text-primary underline underline-offset-2 hover:opacity-80"
+            >プライバシーポリシー</router-link>に同意する <span class="text-red-400">*</span>
+          </span>
+        </label>
+        <p class="text-xs text-gray-500">
+          ご入力いただいた個人情報は、お問い合わせへの回答のために利用します。プライバシーポリシーに同意のうえ送信してください。
+        </p>
         <button
           type="submit"
           :disabled="loading"
@@ -78,7 +96,7 @@ import axios from 'axios'
 const loading = ref(false)
 const success = ref(false)
 const errorMsg = ref('')
-const form = reactive({ name: '', email: '', subject: '', message: '' })
+const form = reactive({ name: '', email: '', subject: '', message: '', agree_privacy: false })
 
 async function submit() {
   loading.value = true
