@@ -80,6 +80,16 @@ else
     fi
 fi
 
+# nginx の設定は1ファイルだけをマウントしている。rsync はファイルを置き換える（別の inode になる）ので、
+# 動いているコンテナには古い設定が見えたまま（nginx -s reload でも変わらない）。
+# 中身が違うときだけ nginx を再起動して読み直させる（数秒止まる）。
+if ! $DOCKER compose -f "$COMPOSE_FILE" exec -T nginx cat /etc/nginx/conf.d/default.conf 2>/dev/null \
+        | cmp -s - "$NGINX_CONF"; then
+    echo "🔁 nginx の設定が変わったので nginx を再起動します..."
+    $DOCKER compose -f "$COMPOSE_FILE" restart nginx
+    $DOCKER compose -f "$COMPOSE_FILE" exec -T nginx nginx -t
+fi
+
 # 起動待ち
 echo "⏳ コンテナの起動を待機中..."
 sleep 5

@@ -44,7 +44,7 @@
 | 1 | High | ユーザー管理メニューの編集権限だけを持つユーザーが、自分や他人の `is_staff` を有効にして全メニューの権限を得られた。スーパーユーザー・スタッフのメールアドレスや有効／無効も変えられたので、メールアドレスを書き換えて招待の再送やパスワード再設定で乗っ取ることもできた | 対応済み（自分より強い権限のユーザーは編集・削除できない。`is_staff` を変えられるのはスタッフ以上だけ。テスト 7 件） |
 | 2 | High | お問い合わせ（未認証）に回数の制限がなかった。送信者のアドレスへ自動返信するので、任意の宛先に、書き込んだ件名・本文入りのメールを MuyBien の名前で何通でも送らせられた（迷惑メールの踏み台。SES が止まると招待・再設定のメールも届かなくなる） | 対応済み（IP ごとに 5 回/時。テスト 1 件） |
 | 3 | Medium | HSTS・`X-Content-Type-Options`・`X-Frame-Options`・`Referrer-Policy`・CSP を nginx で付けていない（SPA の HTML は nginx が返すので Django の既定のヘッダーが付かない）。Django 側も `SECURE_HSTS_SECONDS` などが未設定 | 対応済み（2026-11-18。nginx で HSTS（1年、サブドメインは含めない）・`nosniff`・`X-Frame-Options: DENY`・`Referrer-Policy` を全応答に付け、API では Django の同名ヘッダーを隠して重複をなくした。2026-11-19 に CSP も追加。外部は Google Fonts・Stripe・S3 だけを許可し、`frame-ancestors 'none'`・`object-src 'none'`。公開ページ・picsco・Lab の全メニュー（写真の表示を含む）・ポータル・Stripe のカード入力欄を開いて違反なし。style は picsco の静的ページのため `'unsafe-inline'` を残した） |
-| 4 | Medium | `npm audit` で High 7 件。本番の画面に入るのは axios（プロトタイプ汚染を足がかりにした改ざん。汚染の入口は今のコードにはない）。残りは vite・postcss など開発・ビルド用（開発サーバーは `docker-compose.yml` で 0.0.0.0:5173 に公開している）。`npm audit fix`（--force なし）で直る | 一部対応（2026-11-18。`npm audit fix` で axios・vue など本番の画面に入る依存はすべて解消。**残り 5 件（High 1・Moderate 4）は vite・vue-tsc など開発用ツール**で、メジャー版を上げないと直らないため、ご本人の判断待ち） |
+| 4 | Medium | `npm audit` で High 7 件。本番の画面に入るのは axios（プロトタイプ汚染を足がかりにした改ざん。汚染の入口は今のコードにはない）。残りは vite・postcss など開発・ビルド用（開発サーバーは `docker-compose.yml` で 0.0.0.0:5173 に公開している）。`npm audit fix`（--force なし）で直る | 対応済み（2026-11-18。`npm audit fix` で axios・vue など本番の画面に入る依存はすべて解消。2026-11-19 に vite 8・vue-tsc 3 へ上げて、当初の指摘（開発サーバーのパストラバーサル・esbuild など）を解消。残る High 6 件はすべて picomatch の ReDoS（GHSA-fc5q-39xc-vjpf）1 件から派生したもので、全版が対象で修正版がまだない。ビルド時のファイル探索だけに使い、外部の入力は届かないので受け入れ、修正版が出たら上げる） |
 | 5 | Medium | 本番の `nginx:1.25-alpine` はサポートが終わった系列、`postgres:16.2` は古いマイナー版（既知の CVE が修正済みの 16.x がある。DB は外に公開していない） | 対応済み（2026-11-18。nginx を `1.30-alpine` に上げ、本番の設定で `nginx -t` と配信を確認。2026-11-19 に PostgreSQL も `16.16-bookworm` に更新（16.2 と同じ Debian 12 なので文字の並び順は変わらない。16.2 で作ったデータのボリュームをそのまま 16.16 で起動し、テスト 54 件が通ることを確認）） |
 | 6 | Medium | サイトコンテンツの URL（実績・プロフィールのリンク）を `:href` にそのまま入れている。`javascript:` の URL を登録すると公開サイトで実行され、同じオリジンの `localStorage` にある Lab のトークンを盗める。登録できるのはサイトコンテンツの編集権限を持つユーザーだけ | 対応済み（2026-11-18。API で `url`・`*_url` に http(s)・mailto・`/` で始まるパス以外を拒否し、画面でも同じ確認をして、通らない URL はリンクにしない。テスト 5 件） |
 | 7 | Low | 権限管理の `menu_permissions` の `menu_key`・`level` を検証していない。`member_ids` に存在しない ID を送ると 500。権限管理の編集権限は、自分に全メニューの権限を付けられる（設計どおりだが、実質的に管理者と同じ） | 未対応 |
@@ -61,7 +61,7 @@
 | 18 | Low | アプリのログアウトでサーバーの `auth/logout` を呼ばないので、端末から抜かれた refresh トークンは 7 日間使える | 未対応 |
 | 19 | Low | リリースビルドの難読化（`--obfuscate --split-debug-info`）と証明書のピン留めがない | 未対応（強化） |
 
-重大度ごとの件数: Critical 0・High 2（対応済み）・Medium 5（対応済み 2・一部対応 3）・Low 12（未対応）
+重大度ごとの件数: Critical 0・High 2（対応済み）・Medium 5（すべて対応済み）・Low 12（未対応）
 
 ### これまでに入れた対策（問題なしの根拠）
 
@@ -76,3 +76,4 @@
 | 2026-11-18 | Medium の指摘 6・8 を修正、3・4・5 を一部修正（ブランチ `claude/security-medium`）。Docker の PostgreSQL 16 でテスト 54 件が通過（PR #1 の変更を含む）。nginx 1.30 に本番の設定を載せてヘッダーを確認し、ブラウザで実績・プロフィールのリンク（`javascript:` の URL はリンクにならないこと）を確認 | A02・A03・A05・A07 |
 | 2026-11-18 | PR #2 を本番へデプロイ（`5f150cb`）。本番で nginx 1.30.6、画面・API の両方にセキュリティヘッダーが1つずつ付くこと、HTTP→HTTPS の 301、プロフィール・実績のリンクが従来どおり出ること、`lab/set-password` が不正なリンクを 400 で返すことを確認。デプロイ前の DB のバックアップはサーバーの `~/backups/muybien_before_security_medium_202611181456.sql.gz` | A02・A03 |
 | 2026-11-19 | PostgreSQL を 16.16-bookworm に更新して本番へ反映（`7cd0060`。事前のバックアップは `~/backups/muybien_before_pg1616_202611181525.sql.gz`）。CSP を追加（ブランチ `claude/csp`） | A02・A03 |
+| 2026-11-19 | CSP（PR #4）と vite 8（PR #5）を本番へデプロイ（`4c1b3bc`。事前のバックアップは `~/backups/muybien_before_csp_vite_202611181538.sql.gz`）。本番で CSP が付き、公開ページ・ログイン画面で違反がないこと、S3 の写真の URL が `*.s3.amazonaws.com` で許可の範囲内であることを確認。デプロイで nginx の設定が反映されない問題（1ファイルのマウントと rsync の置き換え）が見つかったので、`scripts/deploy_lightsail.sh` で設定が変わったときだけ nginx を再起動するようにした | A02・A03 |
