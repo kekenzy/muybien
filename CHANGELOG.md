@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-11-19 — フロントの開発用ツールを更新
+
+- vite 5 → 8・@vitejs/plugin-vue 5 → 6・vue-tsc 2 → 3・@tailwindcss/vite 4.3.5（セキュリティレビューの指摘4の残り。開発サーバーのパストラバーサルなど）
+- `vite.config.ts` の `__dirname` を `import.meta.dirname` に置き換え（vite 8 の警告）
+- Node は 20.19 以上が必要（Docker の `node:20-alpine` は 20.20）。手元で `make up` するときは、古い依存が残った `node_modules` のボリュームを作り直す
+
 ## 2026-11-18 — セキュリティレビューの Medium 指摘の対応
 
 - 招待リンク（`lab/set-password`）で、無効にしたユーザーが自分を有効に戻せないようにし、回数制限を付けた
