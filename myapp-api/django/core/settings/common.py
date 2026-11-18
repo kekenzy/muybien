@@ -82,6 +82,7 @@ REST_FRAMEWORK = {
     'NUM_PROXIES': 1,
     'DEFAULT_THROTTLE_RATES': {
         'login': '10/minute',
+        'contact': '5/hour',
         'password_reset': '5/hour',
         'password_change': '10/hour',
     },

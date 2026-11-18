@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.mail import EmailMessage, send_mail
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from .models import ContactMessage
 from .serializers import ContactMessageSerializer
@@ -11,6 +12,10 @@ logger = logging.getLogger('contact')
 
 
 class ContactView(APIView):
+    # 送信者のアドレスへ自動返信するため、回数を制限しないと任意の宛先へメールを送らせる踏み台になる
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'contact'
+
     def post(self, request):
         serializer = ContactMessageSerializer(data=request.data)
         if not serializer.is_valid():

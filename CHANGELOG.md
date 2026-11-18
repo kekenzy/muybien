@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-11-18 — OWASP Top 10:2025 / Mobile Top 10 2024 のセキュリティレビュー
+
+- 結果は [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md)（High 2・Medium 5・Low 12）
+- High を修正: ユーザー管理の編集権限だけで `is_staff` を付けたり、上位ユーザー（スタッフ・スーパーユーザー）を編集・削除したりできたのを禁止
+- High を修正: お問い合わせ（`POST /v1/api/contact`）に IP ごと 5 回/時の制限を追加（429 を返す）
+- テストを 8 件追加
+
 ## 2026-11-12〜13 — プライバシーポリシーの追加
 
 - `/privacy` を追加（`PrivacyView.vue`。全10項：事業者・取得する情報・利用目的・第三者提供・委託先と所在国（AWS 東京リージョン／Stripe 米国）・外部送信（Google Fonts）・安全管理措置（個人情報保護法32条）・開示などの請求・窓口・改定）

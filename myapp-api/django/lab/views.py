@@ -91,6 +91,29 @@ LOGIN_FAILURE_LIMIT = 10
 LOGIN_LOCK_SECONDS = 15 * 60
 
 
+def _privilege(user):
+    """ユーザー管理で使う権限の強さ。スーパーユーザー > スタッフ > ロールだけのユーザー。"""
+    if user.is_superuser:
+        return 2
+    if user.is_staff:
+        return 1
+    return 0
+
+
+def _check_can_manage_user(actor, target=None, validated_data=None):
+    """自分より強い権限のユーザーは編集・削除できず、スタッフへの昇格はスタッフ以上だけができる。
+
+    ユーザー管理メニューの編集権限だけを持つユーザーが、自分や他人を is_staff にして全メニューの
+    権限を得たり、スーパーユーザーのメールアドレスを書き換えて乗っ取ったりするのを防ぐ。
+    """
+    if target is not None and _privilege(target) > _privilege(actor):
+        raise PermissionDenied('自分より強い権限のユーザーは変更できません。')
+    if validated_data is not None and 'is_staff' in validated_data:
+        current = bool(target and target.is_staff)
+        if bool(validated_data['is_staff']) != current and _privilege(actor) < 1:
+            raise PermissionDenied('スタッフ権限を変更できるのはスタッフ以上のユーザーだけです。')
+
+
 def _sync_user_roles(user, role_ids):
     if role_ids is None:
         return
@@ -677,6 +700,7 @@ class UserListCreateView(generics.ListCreateAPIView):
     queryset = User.objects.all().order_by('-date_joined')
 
     def perform_create(self, serializer):
+        _check_can_manage_user(self.request.user, validated_data=serializer.validated_data)
         with transaction.atomic():
             user = serializer.save()
             user.set_unusable_password()
@@ -692,10 +716,12 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
 
     def perform_update(self, serializer):
+        _check_can_manage_user(self.request.user, serializer.instance, serializer.validated_data)
         user = serializer.save()
         _sync_user_roles(user, self.request.data.get('role_ids'))
 
     def perform_destroy(self, instance):
+        _check_can_manage_user(self.request.user, instance)
         if instance.is_superuser:
             raise ValidationError('スーパーユーザーは削除できません。')
         instance.delete()
