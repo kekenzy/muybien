@@ -8,7 +8,7 @@
 | 項目 | 状態 |
 |---|---|
 | Python | `Dockerfile`・`Dockerfile_prd` とも `python:3.11-slim`（5.2・Pillow 13 の条件を満たす。変更なし） |
-| PostgreSQL | ローカル・本番とも `postgres:16.2`（5.2 は 14 以上。変更なし） |
+| PostgreSQL | ローカル・本番とも `postgres:16.2`（5.2 は 14 以上。変更なし。2026-11-19 に `16.16-bookworm` へ更新） |
 
 ## 依存（`myapp-api/django/requirements.txt`）
 

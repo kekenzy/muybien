@@ -47,7 +47,7 @@ services:
     networks: [muybien-network]
 
   myapp-db:
-    image: postgres:16.2
+    image: postgres:16.16-bookworm
     container_name: muybien-db
     restart: unless-stopped
     volumes:
