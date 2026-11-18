@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   nginx:
-    image: nginx:1.25-alpine
+    image: nginx:1.30-alpine
     container_name: muybien-nginx
     restart: unless-stopped
     ports:

@@ -391,3 +391,34 @@ class ContactThrottleTests(TestCase):
         self.assertEqual(codes[:5], [201] * 5)
         self.assertEqual(codes[5], 429)
         self.assertEqual(len(mail.outbox), 10)
+
+
+class SetPasswordInviteTests(TestCase):
+    """招待リンクで、管理者が無効にしたユーザーを有効に戻せないこと。"""
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='invited@example.com', email='invited@example.com')
+        self.user.set_unusable_password()
+        self.user.save()
+        self.uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        self.token = default_token_generator.make_token(self.user)
+
+    def _set(self):
+        return self.client.post(
+            '/v1/api/lab/set-password', {'uid': self.uid, 'token': self.token, 'password': 'newpassword123'}, format='json',
+        )
+
+    def test_active_invited_user_can_set_password(self):
+        self.assertEqual(self._set().status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newpassword123'))
+        self.assertTrue(self.user.is_active)
+
+    def test_deactivated_user_cannot_reactivate_with_invite_link(self):
+        User.objects.filter(pk=self.user.pk).update(is_active=False)
+        self.assertEqual(self._set().status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+        self.assertFalse(self.user.has_usable_password())

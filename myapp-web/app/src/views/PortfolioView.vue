@@ -26,8 +26,8 @@
             </span>
           </div>
           <a
-            v-if="work.url"
-            :href="work.url"
+            v-if="safeUrl(work.url)"
+            :href="safeUrl(work.url)"
             target="_blank"
             rel="noopener noreferrer"
             class="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -44,6 +44,7 @@
 import { onMounted, ref } from 'vue'
 import { Building2, CalendarCheck, BotMessageSquare, Sprout } from 'lucide-vue-next'
 import { fetchSiteContent } from '../lib/api'
+import { safeUrl } from '../lib/utils'
 
 const ICONS: Record<string, any> = { Building2, CalendarCheck, BotMessageSquare, Sprout }
 function iconFor(name: string) {

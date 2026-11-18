@@ -226,9 +226,15 @@ class MeView(APIView):
 
 
 class SetPasswordView(APIView):
-    """招待メールのリンクから初回パスワードを設定する（未ログインでも利用可能）"""
+    """招待メールのリンクから初回パスワードを設定する（未ログインでも利用可能）
+
+    管理者が無効にしたユーザーは、期限内のリンクを持っていても使えない（自分で有効に戻せないようにする）。
+    """
 
     permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
 
     def post(self, request):
         uidb64 = request.data.get('uid', '')
@@ -244,12 +250,16 @@ class SetPasswordView(APIView):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response({'detail': '無効なリンクです。'}, status=status.HTTP_400_BAD_REQUEST)
 
+        if not user.is_active:
+            return Response(
+                {'detail': 'このアカウントは無効化されています。管理者にお問い合わせください。'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if not default_token_generator.check_token(user, token):
             return Response({'detail': 'リンクの有効期限が切れています。'}, status=status.HTTP_400_BAD_REQUEST)
 
         user.set_password(password)
-        user.is_active = True
-        user.save()
+        user.save(update_fields=['password'])
         return Response({
             'detail': 'パスワードを設定しました。',
             'is_customer': hasattr(user, 'customer_profile'),

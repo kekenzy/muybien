@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-11-18 — セキュリティレビューの Medium 指摘の対応
+
+- 招待リンク（`lab/set-password`）で、無効にしたユーザーが自分を有効に戻せないようにし、回数制限を付けた
+- サイトコンテンツの URL（`url`・`*_url`）に `javascript:` などを登録できないようにし、画面でも危険な URL はリンクにしない
+- nginx でセキュリティヘッダー（HSTS・`nosniff`・`X-Frame-Options`・`Referrer-Policy`）を付け、nginx を 1.30 に更新
+- `npm audit fix` で axios・vue などを更新
+- CSP・PostgreSQL の更新・開発用ツール（vite・vue-tsc）のメジャー更新は未対応（ご本人の判断待ち）。詳細は [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md)
+
 ## 2026-11-18 — OWASP Top 10:2025 / Mobile Top 10 2024 のセキュリティレビュー
 
 - 結果は [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md)（High 2・Medium 5・Low 12）
