@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2026-11-22 — お問い合わせ通知先の既定値を Gmail に変更
+
+- `core/settings/common.py` の `CONTACT_NOTIFY_EMAIL` の既定値（環境変数がないときの送り先）を、勤務先のメールから stellastudio4xx@gmail.com に変更（`env.prod.example` と同じ値）。本番はすでに環境変数で同じ値を設定しているため、動きは変わらない
+
 ## 2026-11-12〜13 — プライバシーポリシーの追加
 
 - `/privacy` を追加（`PrivacyView.vue`。全10項：事業者・取得する情報・利用目的・第三者提供・委託先と所在国（AWS 東京リージョン／Stripe 米国）・外部送信（Google Fonts）・安全管理措置（個人情報保護法32条）・開示などの請求・窓口・改定）
