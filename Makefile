@@ -8,7 +8,7 @@ DOCKER = $(shell docker info >/dev/null 2>&1 && echo docker || echo sudo docker)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help local-urls
+.PHONY: help local-urls alert-test prod-alert-test
 
 help:
 	@echo ""
@@ -38,6 +38,7 @@ help:
 	@printf "  %-22s %s\n" "prod-createsuperuser" "本番スーパーユーザーを作成する"
 	@printf "  %-22s %s\n" "prod-bash" "本番 API コンテナのシェルを開く"
 	@printf "  %-22s %s\n" "prod-down" "本番コンテナを停止する"
+	@printf "  %-22s %s\n" "prod-alert-test" "本番からテスト通知を送る（kekenzy@gmail.com 宛て）"
 	@echo ""
 	@echo "スマホアプリ"
 	@printf "  %-22s %s\n" "ios-install" "iPhone にインストールする（DEVICE=端末ID）"
@@ -141,6 +142,14 @@ prod-down:
 	@bash scripts/prod-down.sh
 
 deploy: prod-deploy
+
+# 異常・攻撃の通知のテスト（docs/ALERTS.md）。ローカルは Mailpit に届く。
+# prod-alert-test は kekenzy@gmail.com へ実際に送る（Django 側 1 通 + サーバー側 1 通）
+alert-test:
+	$(DOCKER) exec $(API_CONTAINER) python manage.py alert test
+
+prod-alert-test:
+	@bash scripts/prod-alert-test.sh
 
 # ─────────────────────────────────────────
 # Flutterアプリ（Muybien Memo）実機インストール／シミュレータ起動／リリース

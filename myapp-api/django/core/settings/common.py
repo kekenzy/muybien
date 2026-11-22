@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'lab',
     'portal',
     'content',
+    'core',
 ]
 
 MIDDLEWARE = [
@@ -126,6 +127,19 @@ FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:5173')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 
+# 異常・攻撃の通知（core/alerts.py）。件名は [ALERT][MuyBienBase][dos|intrusion|error|down] 要約
+# 届いたメールは司令塔の定期タスクが Gmail で読むので、宛先と件名の形は変えないこと
+ALERT_EMAIL = os.environ.get('ALERT_EMAIL', 'kekenzy@gmail.com').strip()
+ALERT_PROJECT = 'MuyBienBase'
+ALERT_SERVER_NAME = os.environ.get('ALERT_SERVER_NAME', '').strip()
+ALERT_COOLDOWN_SECONDS = int(os.environ.get('ALERT_COOLDOWN_SECONDS', 15 * 60))
+# 回数制限で止めた件数が、10分間に20件（スコープごと）に達したら dos を通知する
+ALERT_THROTTLE_WINDOW = 10 * 60
+ALERT_THROTTLE_THRESHOLD = int(os.environ.get('ALERT_THROTTLE_THRESHOLD', 20))
+ADMINS = [('MuyBien Alert', ALERT_EMAIL)] if ALERT_EMAIL else []
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+EMAIL_SUBJECT_PREFIX = ''
+
 LOG_DIR = os.path.join(BASE_DIR, 'log')
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -138,9 +152,20 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': os.path.join(LOG_DIR, 'app.log'),
         },
+        'alert_mail': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'core.alerts.AlertAdminEmailHandler',
+        },
+    },
+    'filters': {
+        'require_debug_false': {'()': 'django.utils.log.RequireDebugFalse'},
     },
     'loggers': {
         'django': {'handlers': ['console', 'file'], 'level': 'INFO'},
+        # 500 エラー（django.request の ERROR）だけを通知する。4xx は WARNING なので送らない
+        'django.request': {'handlers': ['alert_mail'], 'level': 'ERROR', 'propagate': True},
         'contact': {'handlers': ['console', 'file'], 'level': 'DEBUG', 'propagate': False},
+        'core': {'handlers': ['console', 'file'], 'level': 'INFO', 'propagate': False},
     },
 }

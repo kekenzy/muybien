@@ -1,0 +1,10 @@
+# 5分ごと: サイトの死活確認（down）と、間隔を空けて溜めた通知のまとめ送信（サーバー側・Django 側）
+[Unit]
+Description=MuyBien alert tick (healthcheck and pending alerts)
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/ec2-user/muybien/deploy/alert/muybien_alert.py --env-file /home/ec2-user/muybien/.env.prod tick
+# 先頭の - は「失敗しても続ける」（API コンテナが止まっていても上の死活確認は動かす）
+ExecStart=-/usr/bin/docker exec muybien-api python manage.py alert flush

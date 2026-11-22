@@ -15,6 +15,8 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - static_volume:/var/www/myapp-api/staticfiles:ro
       - media_volume:/var/www/myapp-api/media:ro
+      # fail2ban が読むログ（deploy/fail2ban）。ローテーションは deploy/logrotate/muybien-nginx
+      - /var/log/muybien-nginx:/var/log/nginx/muybien
     depends_on:
       - myapp-api
     networks: [muybien-network]

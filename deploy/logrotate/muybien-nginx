@@ -1,0 +1,10 @@
+# nginx コンテナが書くログ（fail2ban が読む）。コンテナを止めずに回すため copytruncate
+/var/log/muybien-nginx/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

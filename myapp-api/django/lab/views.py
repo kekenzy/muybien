@@ -3,6 +3,8 @@ import logging
 import uuid
 
 from contact.models import ContactMessage
+from core.alerts import client_ip, send_alert
+from core.throttling import AlertingScopedRateThrottle
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
@@ -24,7 +26,6 @@ from rest_framework.exceptions import APIException, PermissionDenied, Validation
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -142,7 +143,7 @@ def _sync_role_extras(role, data):
 class LabTokenObtainPairView(TokenObtainPairView):
     """Labログイン。閲覧・操作できるメニューは権限管理の設定に依存する。"""
 
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [AlertingScopedRateThrottle]
     throttle_scope = 'login'
 
     def post(self, request, *args, **kwargs):
@@ -160,11 +161,11 @@ class LabTokenObtainPairView(TokenObtainPairView):
         try:
             user = User.objects.get(username=username)
         except User.DoesNotExist:
-            _record_login_failure(failure_key)
+            _record_login_failure(failure_key, username, request)
             return invalid
 
         if not user.check_password(password):
-            _record_login_failure(failure_key)
+            _record_login_failure(failure_key, username, request)
             return invalid
 
         if not user.is_active:
@@ -181,9 +182,29 @@ class LabTokenObtainPairView(TokenObtainPairView):
         return super().post(request, *args, **kwargs)
 
 
-def _record_login_failure(failure_key):
+def _record_login_failure(failure_key, username, request):
     # 最後の失敗から LOGIN_LOCK_SECONDS 経てばリセットされる
-    cache.set(failure_key, cache.get(failure_key, 0) + 1, LOGIN_LOCK_SECONDS)
+    failures = cache.get(failure_key, 0) + 1
+    cache.set(failure_key, failures, LOGIN_LOCK_SECONDS)
+    if failures == LOGIN_FAILURE_LIMIT:
+        _alert_login_lock(username, request)
+
+
+def _mask(username):
+    # ユーザー名がメールアドレスのこともあるので、本文には先頭2文字だけ載せる
+    return (username[:2] + '***') if username else '(空)'
+
+
+def _alert_login_lock(username, request):
+    ip = client_ip(request)
+    send_alert('intrusion', f'Labログインの失敗が続きアカウントを一時ロック ({ip})', '\n'.join([
+        f'何が: Lab ログインで、同じユーザー名へのパスワード誤りが {LOGIN_FAILURE_LIMIT} 回続きました',
+        f'URL: {request.method} {request.path}',
+        f'ユーザー名: {_mask(username)}（実在するかどうかに関わらず数えています）',
+        f'アクセス元 IP（最後の失敗）: {ip}',
+        f'自動でしたこと: このユーザー名のログインを {LOGIN_LOCK_SECONDS // 60} 分ロックしました',
+        '対応の目安: ご本人の打ち間違いでなければ、総当たりの試みです',
+    ]))
 
 
 def _revoke_refresh_tokens(user):
@@ -233,7 +254,7 @@ class SetPasswordView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [AlertingScopedRateThrottle]
     throttle_scope = 'password_reset'
 
     def post(self, request):
@@ -274,7 +295,7 @@ class ChangePasswordView(APIView):
     """ログイン中のユーザーが自分のパスワードを変更する。現在のパスワードの確認が必須。"""
 
     permission_classes = [IsAuthenticated]
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [AlertingScopedRateThrottle]
     throttle_scope = 'password_change'
 
     def post(self, request):
@@ -309,7 +330,7 @@ class PasswordResetRequestView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [AlertingScopedRateThrottle]
     throttle_scope = 'password_reset'
 
     def post(self, request):
@@ -340,7 +361,7 @@ class PasswordResetConfirmView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [AlertingScopedRateThrottle]
     throttle_scope = 'password_reset'
 
     def post(self, request):
