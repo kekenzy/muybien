@@ -7,6 +7,10 @@
 - nginx: `limit_req` を追加（API 全体は毎秒20・まとめて100、ログイン系とお問い合わせは毎分30・まとめて10。`auth/refresh`・`auth/me` は対象外）。fail2ban 用にログをホストの `/var/log/muybien-nginx` にも書く
 - fail2ban（Docker）と5分ごとの死活確認の設定・手順を追加（本番への導入は未実施）。詳細は [docs/ALERTS.md](docs/ALERTS.md)
 
+## 2026-11-22 — お問い合わせ通知先の既定値を Gmail に変更
+
+- `core/settings/common.py` の `CONTACT_NOTIFY_EMAIL` の既定値（環境変数がないときの送り先）を、勤務先のメールから stellastudio4xx@gmail.com に変更（`env.prod.example` と同じ値）。本番はすでに環境変数で同じ値を設定しているため、動きは変わらない
+
 ## 2026-11-19 — フロントの開発用ツールを更新
 
 - vite 5 → 8・@vitejs/plugin-vue 5 → 6・vue-tsc 2 → 3・@tailwindcss/vite 4.3.5（セキュリティレビューの指摘4の残り。開発サーバーのパストラバーサルなど）
