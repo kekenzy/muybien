@@ -1,0 +1,45 @@
+# MuyBien の fail2ban 設定（deploy/fail2ban/docker-compose.yml のコンテナが読む）
+# 遮断したら deploy/alert/muybien_alert.py で kekenzy＠gmail.com へ通知する（件名 [ALERT][MuyBienBase][種類] ...）
+
+[DEFAULT]
+# 遮断しないアクセス元。自宅・事務所の固定 IP があれば、空白区切りで足す
+ignoreip = 127.0.0.1/8 ::1 172.16.0.0/12
+findtime = 10m
+bantime = 1h
+# 繰り返す IP は遮断時間を倍々に延ばす（最長1週間）
+bantime.increment = true
+bantime.maxtime = 1w
+banaction = iptables-multiport
+alert_kind = intrusion
+action = %(banaction)s[port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+         muybien-alert[kind="%(alert_kind)s", name="%(__name__)s"]
+
+# SSH のログイン失敗（ホストの /var/log/secure。rsyslog が必要）
+[sshd]
+enabled = true
+port = ssh
+chain = INPUT
+backend = polling
+logpath = /var/log/secure
+maxretry = 5
+
+# nginx の回数制限（limit_req）に繰り返し当たる IP。
+# nginx は Docker で動くので、ホストの INPUT ではなく DOCKER-USER チェーンで止める
+[nginx-limit-req]
+enabled = true
+port = http,https
+chain = DOCKER-USER
+backend = polling
+logpath = /var/log/muybien-nginx/error.log
+maxretry = 10
+alert_kind = dos
+
+# ログイン・パスワード再設定 API の失敗（401/400/429）を繰り返す IP
+[muybien-auth]
+enabled = true
+filter = muybien-auth
+port = http,https
+chain = DOCKER-USER
+backend = polling
+logpath = /var/log/muybien-nginx/access.log
+maxretry = 20

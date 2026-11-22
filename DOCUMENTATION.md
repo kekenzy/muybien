@@ -27,6 +27,7 @@
 | [SSL_SETUP.md](SSL_SETUP.md) | Let's Encrypt 前提条件と証明書取得手順 |
 | [LIGHTSAIL_NETWORK_SETUP.md](LIGHTSAIL_NETWORK_SETUP.md) | Lightsail のファイアウォール・ポート・DNS |
 | [DIARY_PHOTOS.md](DIARY_PHOTOS.md) | 日記写真の S3 設定と Web・スマホでの付け方 |
+| [docs/ALERTS.md](docs/ALERTS.md) | 異常・攻撃の通知メール（nginx 回数制限・fail2ban・500 エラー・死活確認） |
 | [CLAUDE.md](CLAUDE.md) | AI 開発者向けの簡易リファレンス |
 
 ---
@@ -40,6 +41,7 @@
 - HTTPS: [SSL_SETUP.md](SSL_SETUP.md)
 - ネットワーク: [LIGHTSAIL_NETWORK_SETUP.md](LIGHTSAIL_NETWORK_SETUP.md)
 - 日記の写真（S3・Web・スマホ）: [DIARY_PHOTOS.md](DIARY_PHOTOS.md)
+- 異常・攻撃の通知（fail2ban・アラートメール）: [docs/ALERTS.md](docs/ALERTS.md)
 
 ### 開発
 

@@ -1,0 +1,29 @@
+# fail2ban（SSH と nginx のログを見て、怪しい IP を iptables で遮断し、メールで知らせる）
+# 入れ方は docs/ALERTS.md。本番サーバーの /home/ec2-user/muybien/deploy/fail2ban で
+#   sudo docker compose up -d
+services:
+  fail2ban:
+    image: crazymax/fail2ban:1.1.0
+    container_name: muybien-fail2ban
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TZ=Asia/Tokyo
+      - F2B_LOG_TARGET=STDOUT
+      - F2B_LOG_LEVEL=INFO
+      - F2B_DB_PURGE_AGE=14d
+      - IPTABLES_MODE=auto
+    volumes:
+      # 遮断の記録（DB）はリポジトリの外に置く（デプロイの rsync --delete で消えないように）
+      - /var/lib/muybien-fail2ban:/data
+      - ./jail.d:/data/jail.d:ro
+      - ./filter.d:/data/filter.d:ro
+      - ./action.d:/data/action.d:ro
+      - /var/log/secure:/var/log/secure:ro
+      - /var/log/muybien-nginx:/var/log/muybien-nginx:ro
+      - ../alert:/opt/muybien-alert:ro
+      - ../../.env.prod:/opt/muybien-env/.env.prod:ro
+      - /var/lib/muybien-alert:/var/lib/muybien-alert

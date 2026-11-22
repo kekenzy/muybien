@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-11-22 — 異常・攻撃をメールで知らせる
+
+- 件名 `[ALERT][MuyBienBase][dos|intrusion|error|down] 要約` で kekenzy@gmail.com へ通知（司令塔の定期タスクが読む）。同じ種類は15分に1通まで、間の分はまとめて送る
+- Django: 500 エラー（`ADMINS` + `AdminEmailHandler` を継承。本文にリクエストの中身・変数は載せない）、回数制限で止めた件数が10分に20件、Lab ログインのアカウントロック
+- nginx: `limit_req` を追加（API 全体は毎秒20・まとめて100、ログイン系とお問い合わせは毎分30・まとめて10。`auth/refresh`・`auth/me` は対象外）。fail2ban 用にログをホストの `/var/log/muybien-nginx` にも書く
+- fail2ban（Docker）と5分ごとの死活確認の設定・手順を追加（本番への導入は未実施）。詳細は [docs/ALERTS.md](docs/ALERTS.md)
+
 ## 2026-11-19 — フロントの開発用ツールを更新
 
 - vite 5 → 8・@vitejs/plugin-vue 5 → 6・vue-tsc 2 → 3・@tailwindcss/vite 4.3.5（セキュリティレビューの指摘4の残り。開発サーバーのパストラバーサルなど）
