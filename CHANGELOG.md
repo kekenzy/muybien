@@ -4,6 +4,27 @@
 
 - `core/settings/common.py` の `CONTACT_NOTIFY_EMAIL` の既定値（環境変数がないときの送り先）を、勤務先のメールから stellastudio4xx@gmail.com に変更（`env.prod.example` と同じ値）。本番はすでに環境変数で同じ値を設定しているため、動きは変わらない
 
+## 2026-11-19 — フロントの開発用ツールを更新
+
+- vite 5 → 8・@vitejs/plugin-vue 5 → 6・vue-tsc 2 → 3・@tailwindcss/vite 4.3.5（セキュリティレビューの指摘4の残り。開発サーバーのパストラバーサルなど）
+- `vite.config.ts` の `__dirname` を `import.meta.dirname` に置き換え（vite 8 の警告）
+- Node は 20.19 以上が必要（Docker の `node:20-alpine` は 20.20）。手元で `make up` するときは、古い依存が残った `node_modules` のボリュームを作り直す
+
+## 2026-11-18 — セキュリティレビューの Medium 指摘の対応
+
+- 招待リンク（`lab/set-password`）で、無効にしたユーザーが自分を有効に戻せないようにし、回数制限を付けた
+- サイトコンテンツの URL（`url`・`*_url`）に `javascript:` などを登録できないようにし、画面でも危険な URL はリンクにしない
+- nginx でセキュリティヘッダー（HSTS・`nosniff`・`X-Frame-Options`・`Referrer-Policy`）を付け、nginx を 1.30 に更新
+- `npm audit fix` で axios・vue などを更新
+- CSP・PostgreSQL の更新・開発用ツール（vite・vue-tsc）のメジャー更新は未対応（ご本人の判断待ち）。詳細は [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md)
+
+## 2026-11-18 — OWASP Top 10:2025 / Mobile Top 10 2024 のセキュリティレビュー
+
+- 結果は [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md)（High 2・Medium 5・Low 12）
+- High を修正: ユーザー管理の編集権限だけで `is_staff` を付けたり、上位ユーザー（スタッフ・スーパーユーザー）を編集・削除したりできたのを禁止
+- High を修正: お問い合わせ（`POST /v1/api/contact`）に IP ごと 5 回/時の制限を追加（429 を返す）
+- テストを 8 件追加
+
 ## 2026-11-12〜13 — プライバシーポリシーの追加
 
 - `/privacy` を追加（`PrivacyView.vue`。全10項：事業者・取得する情報・利用目的・第三者提供・委託先と所在国（AWS 東京リージョン／Stripe 米国）・外部送信（Google Fonts）・安全管理措置（個人情報保護法32条）・開示などの請求・窓口・改定）

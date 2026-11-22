@@ -319,3 +319,106 @@ class ContactFormTests(TestCase):
         }, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertIn('email', response.json())
+
+
+class UserManagementPrivilegeTests(TestCase):
+    """ユーザー管理の編集権限だけで、スタッフへの昇格や上位ユーザーの乗っ取りができないこと。"""
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        role = Role.objects.create(name='ユーザー管理者')
+        RoleMenuPermission.objects.create(role=role, menu_key='users', level=RoleMenuPermission.LEVEL_WRITE)
+        self.manager = User.objects.create_user(username='manager@example.com', email='manager@example.com', password='password123')
+        UserProfile.objects.create(user=self.manager).roles.add(role)
+        self.member = User.objects.create_user(username='member@example.com', email='member@example.com', password='password123')
+        self.staff = User.objects.create_user(username='staff@example.com', email='staff@example.com', password='password123', is_staff=True)
+        self.admin = User.objects.create_superuser(username='admin@example.com', email='admin@example.com', password='password123')
+        self.client.force_authenticate(user=self.manager)
+
+    def test_cannot_make_self_staff(self):
+        response = self.client.patch(f'/v1/api/lab/users/{self.manager.pk}', {'is_staff': True}, format='json')
+        self.assertEqual(response.status_code, 403)
+        self.manager.refresh_from_db()
+        self.assertFalse(self.manager.is_staff)
+
+    def test_cannot_create_staff_user(self):
+        response = self.client.post('/v1/api/lab/users', {
+            'username': 'new@example.com', 'email': 'new@example.com', 'is_staff': True,
+        }, format='json')
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(User.objects.filter(username='new@example.com').exists())
+
+    def test_cannot_change_superuser_email(self):
+        response = self.client.patch(f'/v1/api/lab/users/{self.admin.pk}', {'email': 'attacker@example.com'}, format='json')
+        self.assertEqual(response.status_code, 403)
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.email, 'admin@example.com')
+
+    def test_cannot_deactivate_or_delete_staff(self):
+        self.assertEqual(
+            self.client.patch(f'/v1/api/lab/users/{self.staff.pk}', {'is_active': False}, format='json').status_code, 403,
+        )
+        self.assertEqual(self.client.delete(f'/v1/api/lab/users/{self.staff.pk}').status_code, 403)
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.is_active)
+
+    def test_can_still_manage_same_level_user(self):
+        response = self.client.patch(f'/v1/api/lab/users/{self.member.pk}', {'email': 'member2@example.com'}, format='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_staff_can_grant_staff_but_not_edit_superuser(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.patch(f'/v1/api/lab/users/{self.member.pk}', {'is_staff': True}, format='json')
+        self.assertEqual(response.status_code, 200)
+        response = self.client.patch(f'/v1/api/lab/users/{self.admin.pk}', {'email': 'x@example.com'}, format='json')
+        self.assertEqual(response.status_code, 403)
+
+    def test_superuser_can_edit_anyone(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.patch(f'/v1/api/lab/users/{self.staff.pk}', {'is_staff': False}, format='json')
+        self.assertEqual(response.status_code, 200)
+
+
+class ContactThrottleTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_contact_is_rate_limited_per_client(self):
+        client = APIClient()
+        payload = {'name': 'x', 'email': 'guest@example.com', 'subject': 's', 'message': 'm', 'agree_privacy': True}
+        codes = [client.post('/v1/api/contact', payload, format='json').status_code for _ in range(6)]
+        self.assertEqual(codes[:5], [201] * 5)
+        self.assertEqual(codes[5], 429)
+        self.assertEqual(len(mail.outbox), 10)
+
+
+class SetPasswordInviteTests(TestCase):
+    """招待リンクで、管理者が無効にしたユーザーを有効に戻せないこと。"""
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.user = User.objects.create_user(username='invited@example.com', email='invited@example.com')
+        self.user.set_unusable_password()
+        self.user.save()
+        self.uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        self.token = default_token_generator.make_token(self.user)
+
+    def _set(self):
+        return self.client.post(
+            '/v1/api/lab/set-password', {'uid': self.uid, 'token': self.token, 'password': 'newpassword123'}, format='json',
+        )
+
+    def test_active_invited_user_can_set_password(self):
+        self.assertEqual(self._set().status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newpassword123'))
+        self.assertTrue(self.user.is_active)
+
+    def test_deactivated_user_cannot_reactivate_with_invite_link(self):
+        User.objects.filter(pk=self.user.pk).update(is_active=False)
+        self.assertEqual(self._set().status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+        self.assertFalse(self.user.has_usable_password())

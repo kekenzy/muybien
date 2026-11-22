@@ -14,7 +14,7 @@
           {{ texts.profile_tagline }}
         </p>
         <a
-          :href="texts.profile_blog_url || 'https://kenzy-goldentime.blogspot.com/'"
+          :href="safeUrl(texts.profile_blog_url) || 'https://kenzy-goldentime.blogspot.com/'"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center gap-2 mt-8 text-sm text-white/50 hover:text-white transition-colors"
@@ -116,8 +116,8 @@
               >{{ tag }}</span>
             </div>
             <a
-              v-if="app.url"
-              :href="app.url"
+              v-if="safeUrl(app.url)"
+              :href="safeUrl(app.url)"
               :target="isExternal(app.url) ? '_blank' : undefined"
               :rel="isExternal(app.url) ? 'noopener noreferrer' : undefined"
               class="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -178,6 +178,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { fetchSiteContent, type ContentItem } from '../lib/api'
+import { safeUrl } from '../lib/utils'
 
 interface ValueItem {
   emoji: string

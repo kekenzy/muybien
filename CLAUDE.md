@@ -45,7 +45,7 @@ Django REST API + Vue 3 SPA 構成。**CSS は Tailwind CSS 4**（scoped CSS / S
 
 | Method | Path | 説明 |
 |--------|------|------|
-| POST | `/v1/api/contact` | コンタクトフォーム送信（メール通知・DB保存。`agree_privacy: true` 必須） |
+| POST | `/v1/api/contact` | コンタクトフォーム送信（メール通知・DB保存。`agree_privacy: true` 必須。IP ごとに 5 回/時まで） |
 | POST | `/v1/api/auth/login` | Lab ログイン（JWT） |
 | POST | `/v1/api/auth/refresh` | JWT リフレッシュ |
 | GET | `/v1/api/auth/me` | ログイン中ユーザー（権限情報を含む） |
