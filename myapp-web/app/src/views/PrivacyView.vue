@@ -175,7 +175,8 @@
         </section>
 
         <p class="pt-6 border-t border-gray-100 text-right text-gray-500">
-          制定日：{{ ESTABLISHED_ON }}
+          制定日：{{ ESTABLISHED_ON }}<br />
+          最終改定日：{{ REVISED_ON }}
         </p>
       </div>
     </article>
@@ -183,11 +184,12 @@
 </template>
 
 <script setup lang="ts">
-// 運営者は屋号 Stella Studio・代表者 永井 謙史（全プロジェクト共通）
+// 運営者は屋号 Stella Studio・代表者 永井 順子（全プロジェクト共通。2026-11-24 に永井 謙史から変更）
 const OPERATOR_NAME = 'Stella Studio'
-const REPRESENTATIVE = '永井 謙史'
+const REPRESENTATIVE = '永井 順子'
 // 個人情報の窓口（Stella Studio 共通）
 const CONTACT_EMAIL = 'stellastudio4xx＠gmail.com'
-// 公開日に合わせて更新する。改定したら「最終改定日」を別に足す
+// 制定日は公開日。改定したら REVISED_ON を更新する
 const ESTABLISHED_ON = '2026年11月13日'
+const REVISED_ON = '2026年11月24日'
 </script>
