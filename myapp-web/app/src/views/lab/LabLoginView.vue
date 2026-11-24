@@ -48,8 +48,11 @@
         パスワードをお忘れの方
       </router-link>
 
-      <router-link to="/" class="block text-center text-xs text-white/50 hover:text-white/70 mt-8 transition-colors">
-        ← サイトに戻る
+      <router-link
+        :to="LAB_ONLY ? '/privacy' : '/'"
+        class="block text-center text-xs text-white/50 hover:text-white/70 mt-8 transition-colors"
+      >
+        {{ LAB_ONLY ? 'プライバシーポリシー' : '← サイトに戻る' }}
       </router-link>
     </div>
   </div>
@@ -57,6 +60,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { LAB_ONLY } from '../../lib/siteMode'
 import { useRouter } from 'vue-router'
 import { fetchMe, login, logout } from '../../lib/api'
 import { setPermissions } from '../../lib/permissions'

@@ -30,6 +30,7 @@ Django REST API + Vue 3 SPA 構成。**CSS は Tailwind CSS 4**（scoped CSS / S
 - 条件付きクラス結合は `src/lib/utils.ts` の `cn()` を使う
 - UI: `radix-vue` + `lucide-vue-next`（Tailwind で見た目を当てる）
 - ルーター: `/`, `/services`, `/portfolio`, `/profile`, `/contact`, `/privacy`, `/lab`, `/lab/login`
+- **2026-11-24 から Lab のみ公開**: `src/lib/siteMode.ts` の `LAB_ONLY = true` の間は `/lab`・`/privacy`・`/picsco` 以外（公開ページ・`/portal`）をルートから外し、`/lab` へ移す。戻すときは `false` にする
 - axios で `/v1/api/` へリクエスト（Vite proxy 経由）
 
 **フロントのスタイル方針**

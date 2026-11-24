@@ -11,7 +11,7 @@
         </router-link>
 
         <!-- Desktop nav -->
-        <nav class="hidden md:flex items-center gap-8">
+        <nav v-if="!LAB_ONLY" class="hidden md:flex items-center gap-8">
           <router-link
             v-for="item in navItems"
             :key="item.to"
@@ -37,6 +37,7 @@
 
         <!-- Mobile menu button -->
         <button
+          v-if="!LAB_ONLY"
           type="button"
           class="md:hidden flex items-center justify-center w-10 h-10 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
           :aria-expanded="menuOpen"
@@ -99,7 +100,7 @@
 
     <footer class="border-t border-white/10 bg-[#080c14] py-8 px-4 text-center text-sm text-white/30">
       <nav class="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-4" aria-label="フッター">
-        <router-link to="/contact" class="text-white/50 hover:text-white transition-colors">お問い合わせ</router-link>
+        <router-link v-if="!LAB_ONLY" to="/contact" class="text-white/50 hover:text-white transition-colors">お問い合わせ</router-link>
         <router-link to="/privacy" class="text-white/50 hover:text-white transition-colors">プライバシーポリシー</router-link>
       </nav>
       <p>© 2024 永井謙史 All rights reserved.</p>
@@ -111,6 +112,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Menu, X } from 'lucide-vue-next'
+import { LAB_ONLY } from './lib/siteMode'
 
 const route = useRoute()
 const isBareRoute = computed(() => route.path.startsWith('/lab') || route.path.startsWith('/portal'))

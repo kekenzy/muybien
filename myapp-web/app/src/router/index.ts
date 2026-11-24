@@ -1,8 +1,8 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { clearTokens, isLoggedIn } from '../lib/auth'
 import { isPortalLoggedIn } from '../lib/portalAuth'
 import { canRead, clearPermissions, type MenuKey } from '../lib/permissions'
-import HomeView from '../views/HomeView.vue'
+import { LAB_ONLY } from '../lib/siteMode'
 
 const LAB_MENU_ROUTES: { menuKey: MenuKey; path: string }[] = [
   { menuKey: 'contacts', path: '/lab' },
@@ -18,16 +18,58 @@ const LAB_MENU_ROUTES: { menuKey: MenuKey; path: string }[] = [
   { menuKey: 'site_content', path: '/lab/content' },
 ]
 
+const publicRoutes: RouteRecordRaw[] = [
+  { path: '/', component: () => import('../views/HomeView.vue') },
+  { path: '/services', component: () => import('../views/ServicesView.vue') },
+  { path: '/portfolio', component: () => import('../views/PortfolioView.vue') },
+  { path: '/profile', component: () => import('../views/ProfileView.vue') },
+  { path: '/contact', component: () => import('../views/ContactView.vue') },
+  { path: '/news/:id', component: () => import('../views/AnnouncementDetailView.vue') },
+]
+
+const portalRoutes: RouteRecordRaw[] = [
+  {
+    path: '/portal',
+    component: () => import('../layouts/PortalLayout.vue'),
+    children: [
+      {
+        path: 'login',
+        name: 'portal-login',
+        component: () => import('../views/portal/PortalLoginView.vue'),
+        meta: { portalGuestOnly: true },
+      },
+      {
+        path: 'set-password',
+        name: 'portal-set-password',
+        component: () => import('../views/portal/PortalSetPasswordView.vue'),
+      },
+      {
+        path: '',
+        name: 'portal-root',
+        redirect: '/portal/reservations',
+      },
+      {
+        path: 'reservations',
+        name: 'portal-reservations',
+        component: () => import('../views/portal/PortalReservationView.vue'),
+        meta: { requiresPortalAuth: true },
+      },
+      {
+        path: 'payment',
+        name: 'portal-payment',
+        component: () => import('../views/portal/PortalPaymentView.vue'),
+        meta: { requiresPortalAuth: true },
+      },
+    ],
+  },
+]
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', component: HomeView },
-    { path: '/services', component: () => import('../views/ServicesView.vue') },
-    { path: '/portfolio', component: () => import('../views/PortfolioView.vue') },
-    { path: '/profile', component: () => import('../views/ProfileView.vue') },
-    { path: '/contact', component: () => import('../views/ContactView.vue') },
+    // 公開ページ（LAB_ONLY の間は出さない。lib/siteMode.ts）
+    ...(LAB_ONLY ? [] : publicRoutes),
     { path: '/privacy', component: () => import('../views/PrivacyView.vue') },
-    { path: '/news/:id', component: () => import('../views/AnnouncementDetailView.vue') },
     // 静的LP（public/picsco）。Viteは /picsco/ をSPAに落とすため index.html へハード遷移する
     {
       path: '/picsco/:pathMatch(.*)*',
@@ -138,40 +180,11 @@ const router = createRouter({
         },
       ],
     },
-    {
-      path: '/portal',
-      component: () => import('../layouts/PortalLayout.vue'),
-      children: [
-        {
-          path: 'login',
-          name: 'portal-login',
-          component: () => import('../views/portal/PortalLoginView.vue'),
-          meta: { portalGuestOnly: true },
-        },
-        {
-          path: 'set-password',
-          name: 'portal-set-password',
-          component: () => import('../views/portal/PortalSetPasswordView.vue'),
-        },
-        {
-          path: '',
-          name: 'portal-root',
-          redirect: '/portal/reservations',
-        },
-        {
-          path: 'reservations',
-          name: 'portal-reservations',
-          component: () => import('../views/portal/PortalReservationView.vue'),
-          meta: { requiresPortalAuth: true },
-        },
-        {
-          path: 'payment',
-          name: 'portal-payment',
-          component: () => import('../views/portal/PortalPaymentView.vue'),
-          meta: { requiresPortalAuth: true },
-        },
-      ],
-    },
+    // 顧客ポータル（LAB_ONLY の間は出さない）
+    ...(LAB_ONLY ? [] : portalRoutes),
+    // LAB_ONLY の間、上にない URL（/・/profile・/portal など）は Lab へ移す。
+    // 未ログインなら beforeEach が /lab/login へ移す
+    ...(LAB_ONLY ? [{ path: '/:pathMatch(.*)*', redirect: '/lab' }] : []),
   ],
   scrollBehavior: () => ({ top: 0 }),
 })
